@@ -11,14 +11,20 @@ import {
   History,
   Eye,
   ArrowRight,
-  Sparkles
+  Sparkles,
+  QrCode,
+  ScanLine
 } from 'lucide-react';
 import { useRelief } from '../context/ReliefContext';
+import QRVerificationModal from './QRVerificationModal';
 
 export default function Module7_DeliveryVerification() {
   const { deliveries, updateDeliveryStage, verifyDeliveryReceipt } = useRelief();
 
   const [activeVerificationDelivery, setActiveVerificationDelivery] = useState(null);
+  const [isQROpen, setIsQROpen] = useState(false);
+  const [selectedQRDelivery, setSelectedQRDelivery] = useState(null);
+
   const [verificationForm, setVerificationForm] = useState({
     receivedFood: 0,
     receivedWater: 0,
@@ -75,6 +81,17 @@ export default function Module7_DeliveryVerification() {
             Supplies are never assumed delivered upon warehouse dispatch. Every convoy undergoes 6 rigorous checkpoints with quantitative discrepancy reconciliation.
           </p>
         </div>
+
+        <button
+          onClick={() => {
+            setSelectedQRDelivery(deliveries[0]);
+            setIsQROpen(true);
+          }}
+          className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold rounded-xl text-xs shadow-lg shadow-emerald-600/20 transition"
+        >
+          <QrCode className="w-4 h-4" />
+          <span>Field Optical QR Scanner & Passes</span>
+        </button>
       </div>
 
       {/* 6-Stage Delivery Pipeline Overview Banner */}
@@ -122,6 +139,18 @@ export default function Module7_DeliveryVerification() {
                 </div>
 
                 <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => {
+                      setSelectedQRDelivery(del);
+                      setIsQROpen(true);
+                    }}
+                    className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-emerald-400 text-xs font-semibold rounded-lg border border-slate-700 flex items-center gap-1.5 transition"
+                    title="Inspect digital QR Consignment pass"
+                  >
+                    <QrCode className="w-3.5 h-3.5" />
+                    <span>QR Pass</span>
+                  </button>
+
                   {del.stageIndex < 4 && (
                     <button
                       onClick={() => updateDeliveryStage(del.id, del.stageIndex + 1)}
@@ -364,6 +393,13 @@ export default function Module7_DeliveryVerification() {
           </div>
         </div>
       )}
+
+      {/* Scannable Field QR Manifest Modal */}
+      <QRVerificationModal
+        isOpen={isQROpen}
+        onClose={() => setIsQROpen(false)}
+        selectedDelivery={selectedQRDelivery}
+      />
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Shield,
   User,
@@ -10,23 +10,43 @@ import {
   FileCheck,
   Building2,
   Truck,
-  HeartHandshake
+  HeartHandshake,
+  Crown,
+  AlertTriangle,
+  History,
+  Smartphone,
+  Clock
 } from 'lucide-react';
 import { useRelief } from '../context/ReliefContext';
 
 export default function RoleSwitcherModal({ isOpen, onClose }) {
   const { currentUser, switchUserRole, addToast } = useRelief();
 
+  // Local state for security settings
+  const [mfaEnabled, setMfaEnabled] = useState(true);
+  const [sessionMinutesLeft, setSessionMinutesLeft] = useState(45);
+  const [showPermissionsMatrix, setShowPermissionsMatrix] = useState(false);
+
   if (!isOpen) return null;
 
   const roles = [
     {
-      id: 'Coordinator',
+      id: 'Super Admin',
+      name: 'Rohan Deshpande',
+      title: 'National Crisis Systems Administrator',
+      badgeColor: 'bg-amber-500/20 text-amber-400 border-amber-500/40',
+      icon: Crown,
+      description: 'Complete platform control, audit logs, configuration, and security management.',
+      permissions: ['Complete System Control', 'Override Dual Approvals', 'Manage IAM & Roles', 'Delete & Purge Records', 'Export Audit Transcripts']
+    },
+    {
+      id: 'Disaster Coordinator',
       name: 'Dr. Vikram Malhotra',
-      title: 'Disaster Relief Coordinator',
+      title: 'Disaster Relief Lead Coordinator',
       badgeColor: 'bg-rose-500/20 text-rose-400 border-rose-500/40',
       icon: Shield,
-      permissions: ['Approve Allocation', 'Triage Requests', 'Enact Route Detours', 'Full Command Access']
+      description: 'Disaster monitoring, resource triage, two-level allocation proposals & approvals.',
+      permissions: ['Propose Allocations', 'Dual-Approve Allocations', 'Enact Route Detours', 'Authorize Dispatches', 'Full Operational Command']
     },
     {
       id: 'Warehouse Manager',
@@ -34,127 +54,220 @@ export default function RoleSwitcherModal({ isOpen, onClose }) {
       title: 'Central Depot Logistics Manager',
       badgeColor: 'bg-blue-500/20 text-blue-400 border-blue-500/40',
       icon: Building2,
-      permissions: ['Update Warehouse Inventory', 'Approve Inter-Depot Transfers', 'Confirm Dispatches']
+      description: 'Depot inventory tracking, batch dispatch loading, and inter-depot surplus transfers.',
+      permissions: ['Update Warehouse Inventory', 'Approve Inter-Depot Transfers', 'Confirm Dispatches', 'Inspect Batch QR Passes']
     },
     {
-      id: 'Field Volunteer',
+      id: 'Transport Manager',
+      name: 'Capt. Sunita Rao',
+      title: 'Disaster Fleet Operations Director',
+      badgeColor: 'bg-indigo-500/20 text-indigo-400 border-indigo-500/40',
+      icon: Truck,
+      description: 'Fleet vehicle allocation, driver dispatching, route optimization, and detour monitoring.',
+      permissions: ['Assign Vehicles', 'Trigger OR-Tools Routing', 'Toggle Road Hazards & Detours', 'Monitor Driver GPS Latency']
+    },
+    {
+      id: 'Volunteer',
       name: 'Meera Deshmukh',
-      title: 'Camp Volunteer Representative',
+      title: 'Field Volunteer Representative',
       badgeColor: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40',
       icon: HeartHandshake,
-      permissions: ['Submit Relief Requests', 'Upload Photo Evidence', 'Verify Ground Receipts']
+      description: 'On-ground casualty triage, relief intake request submission, and photo verification.',
+      permissions: ['Submit Relief Requests', 'Upload Photo Evidence', 'Verify Ground Receipts', 'Report Damaged Goods']
     },
     {
-      id: 'Fleet Driver',
-      name: 'Rajendra Singh',
-      title: 'Heavy Truck RL-01 Pilot',
-      badgeColor: 'bg-purple-500/20 text-purple-400 border-purple-500/40',
-      icon: Truck,
-      permissions: ['View Route Sequences', 'Update Transit Checkpoints', 'Report Road Hazards']
-    },
-    {
-      id: 'Admin',
-      name: 'Col. R. Sen',
-      title: 'Emergency Operations Director',
-      badgeColor: 'bg-amber-500/20 text-amber-400 border-amber-500/40',
-      icon: Key,
-      permissions: ['All Permissions', 'Disaster Scenario Simulator', 'Audit Log Export', 'User Management']
+      id: 'Relief Camp Manager',
+      name: 'Anand Kulkarni',
+      title: 'Riverbank Shelter Camp Manager',
+      badgeColor: 'bg-teal-500/20 text-teal-400 border-teal-500/40',
+      icon: User,
+      description: 'Camp population census, requirement requisition submission, and final delivery sign-off.',
+      permissions: ['Submit Camp Requisitions', 'Confirm Consignment Delivery', 'Sign Digital QR Delivery Passes']
     }
   ];
 
   const handleSelectRole = (r) => {
     switchUserRole(r);
-    addToast('success', `Active session switched to ${r.title} (${r.name}). Role permissions updated!`, 'Security Context');
+    addToast('success', `Session authority updated: ${r.name} (${r.id})`, 'RBAC Authorization');
     onClose();
   };
 
+  const handleToggleMFA = () => {
+    setMfaEnabled(!mfaEnabled);
+    addToast(mfaEnabled ? 'warning' : 'success', `Multi-Factor Authentication (MFA) ${!mfaEnabled ? 'Enforced' : 'Disabled'} for Administrators.`, 'MFA Security');
+  };
+
   return (
-    <div className="fixed inset-0 bg-black/80 z-[3000] flex items-center justify-center p-4 backdrop-blur-md" onClick={onClose}>
-      <div className="bg-slate-900 border border-slate-700 rounded-2xl max-w-xl w-full p-6 shadow-2xl space-y-5" onClick={e => e.stopPropagation()}>
-        <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-          <div className="flex items-center gap-2.5">
-            <div className="p-2 bg-rose-500/20 text-rose-400 rounded-lg">
-              <Lock className="w-5 h-5" />
+    <div className="fixed inset-0 bg-black/70 z-[2600] flex items-center justify-center p-4 backdrop-blur-sm" onClick={onClose}>
+      <div
+        className="w-full max-w-2xl bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
+        onClick={e => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="px-6 py-4 bg-gradient-to-r from-slate-900 via-indigo-950/40 to-slate-900 border-b border-slate-800 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-indigo-500/20 text-indigo-400 rounded-xl border border-indigo-500/30">
+              <Shield className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="font-bold text-white text-base">Role-Based Access Control (RBAC)</h3>
-              <p className="text-xs text-slate-400">Authenticate as different humanitarian actors to test permission barriers.</p>
+              <h2 className="text-lg font-bold text-white flex items-center gap-2">
+                Enterprise RBAC & Security Authority
+                <span className="text-[10px] font-mono font-bold bg-indigo-500/20 text-indigo-400 px-2 py-0.5 rounded border border-indigo-500/30 uppercase">
+                  6 Tiered Roles
+                </span>
+              </h2>
+              <p className="text-xs text-slate-400">
+                Current Active Session: <b className="text-white">{currentUser.name}</b> ({currentUser.role})
+              </p>
             </div>
           </div>
-          <button onClick={onClose} className="text-slate-400 hover:text-white p-1 rounded-lg">
+          <button onClick={onClose} className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition">
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Current Active Session Box */}
-        <div className="bg-slate-800/80 p-3.5 rounded-xl border border-slate-700 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-full bg-slate-700 flex items-center justify-center font-bold text-sm text-white">
-              {currentUser?.name?.charAt(0) || 'U'}
-            </div>
-            <div>
-              <div className="font-bold text-white text-xs">{currentUser?.name}</div>
-              <div className="text-[11px] text-slate-400">{currentUser?.email}</div>
+        {/* Security Controls Strip (MFA & Session Expiry) */}
+        <div className="bg-slate-950 px-6 py-3 border-b border-slate-800 flex flex-wrap items-center justify-between gap-3 text-xs">
+          <div className="flex items-center gap-4">
+            <button
+              onClick={handleToggleMFA}
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg font-semibold border transition ${
+                mfaEnabled ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40' : 'bg-slate-800 text-slate-400 border-slate-700'
+              }`}
+            >
+              <Smartphone className="w-3.5 h-3.5" />
+              <span>Admin MFA: {mfaEnabled ? 'Active (TOTP Enforced)' : 'Disabled'}</span>
+            </button>
+
+            <div className="flex items-center gap-1.5 text-slate-400 font-mono text-[11px]">
+              <Clock className="w-3.5 h-3.5 text-indigo-400" />
+              <span>Session Expiry: <b className="text-white">{sessionMinutesLeft}m</b></span>
             </div>
           </div>
 
-          <span className="px-2.5 py-1 rounded bg-rose-500 text-white font-bold text-[10px] uppercase tracking-wider">
-            Active: {currentUser?.role}
-          </span>
+          <button
+            onClick={() => setShowPermissionsMatrix(!showPermissionsMatrix)}
+            className="text-indigo-400 hover:text-indigo-300 font-semibold text-[11px] underline"
+          >
+            {showPermissionsMatrix ? 'Hide Authority Matrix' : 'View Permissions Matrix'}
+          </button>
         </div>
 
-        {/* Select Role */}
-        <div className="space-y-2">
-          <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">
-            Select Role Identity to Switch Session:
-          </span>
-          <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
-            {roles.map(r => {
-              const isCurrent = currentUser?.role === r.id;
+        {/* Modal Body */}
+        <div className="p-6 overflow-y-auto space-y-4 flex-1 text-slate-200 text-xs">
+          {showPermissionsMatrix ? (
+            <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-3">
+              <h4 className="font-bold text-white text-xs uppercase tracking-wider">Role Authority Matrix:</h4>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-[11px]">
+                  <thead>
+                    <tr className="border-b border-slate-800 text-slate-400">
+                      <th className="pb-2">Capability</th>
+                      <th className="pb-2">Super Admin</th>
+                      <th className="pb-2">Coordinator</th>
+                      <th className="pb-2">Wh. Mgr</th>
+                      <th className="pb-2">Trans. Mgr</th>
+                      <th className="pb-2">Volunteer</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-800/60 text-slate-300">
+                    <tr>
+                      <td className="py-2">Propose Allocation</td>
+                      <td className="text-emerald-400">✓</td>
+                      <td className="text-emerald-400">✓</td>
+                      <td className="text-slate-600">✗</td>
+                      <td className="text-slate-600">✗</td>
+                      <td className="text-slate-600">✗</td>
+                    </tr>
+                    <tr>
+                      <td className="py-2">2nd-Level Critical Approval</td>
+                      <td className="text-emerald-400">✓</td>
+                      <td className="text-emerald-400">✓ (Dual)</td>
+                      <td className="text-slate-600">✗</td>
+                      <td className="text-slate-600">✗</td>
+                      <td className="text-slate-600">✗</td>
+                    </tr>
+                    <tr>
+                      <td className="py-2">Inter-Depot Transfers</td>
+                      <td className="text-emerald-400">✓</td>
+                      <td className="text-emerald-400">✓</td>
+                      <td className="text-emerald-400">✓</td>
+                      <td className="text-slate-600">✗</td>
+                      <td className="text-slate-600">✗</td>
+                    </tr>
+                    <tr>
+                      <td className="py-2">Enact Detour / Hazard</td>
+                      <td className="text-emerald-400">✓</td>
+                      <td className="text-emerald-400">✓</td>
+                      <td className="text-slate-600">✗</td>
+                      <td className="text-emerald-400">✓</td>
+                      <td className="text-slate-600">✗</td>
+                    </tr>
+                    <tr>
+                      <td className="py-2">Submit & Verify Receipts</td>
+                      <td className="text-emerald-400">✓</td>
+                      <td className="text-emerald-400">✓</td>
+                      <td className="text-emerald-400">✓</td>
+                      <td className="text-emerald-400">✓</td>
+                      <td className="text-emerald-400">✓</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          ) : null}
+
+          {/* 6 Roles Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {roles.map((r) => {
               const Icon = r.icon;
+              const isCurrent = currentUser?.role === r.id;
 
               return (
                 <div
                   key={r.id}
                   onClick={() => handleSelectRole(r)}
-                  className={`p-3 rounded-xl border cursor-pointer transition-all flex items-center justify-between ${
+                  className={`p-4 rounded-xl border transition-all cursor-pointer text-left ${
                     isCurrent
-                      ? 'bg-rose-950/40 border-rose-500 ring-1 ring-rose-500'
-                      : 'bg-slate-800/60 border-slate-700/80 hover:bg-slate-800 hover:border-slate-600'
+                      ? 'bg-indigo-950/40 border-indigo-500 ring-1 ring-indigo-500/50 shadow-lg shadow-indigo-500/10'
+                      : 'bg-slate-950/60 border-slate-800 hover:border-slate-700 hover:bg-slate-800/40'
                   }`}
                 >
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-lg bg-slate-800 border border-slate-700 text-slate-300">
-                      <Icon className="w-4 h-4" />
-                    </div>
-                    <div>
-                      <div className="font-bold text-white text-xs flex items-center gap-2">
-                        <span>{r.name}</span>
-                        <span className={`text-[9px] px-1.5 py-0.2 rounded font-bold uppercase ${r.badgeColor}`}>
-                          {r.id}
-                        </span>
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-center gap-2.5">
+                      <div className="p-2 rounded-lg bg-slate-800 text-slate-200">
+                        <Icon className="w-4 h-4 text-indigo-400" />
                       </div>
-                      <div className="text-[10px] text-slate-400">{r.title}</div>
-                      <div className="text-[10px] text-slate-500 mt-1">
-                        Perms: {r.permissions.join(', ')}
+                      <div>
+                        <div className="font-bold text-white text-xs">{r.name}</div>
+                        <div className="text-[10px] text-slate-400">{r.title}</div>
                       </div>
                     </div>
+                    {isCurrent && (
+                      <span className="flex items-center gap-1 text-[10px] text-emerald-400 font-bold">
+                        <CheckCircle2 className="w-3.5 h-3.5" /> Active
+                      </span>
+                    )}
                   </div>
 
-                  {isCurrent && <CheckCircle2 className="w-5 h-5 text-rose-400 shrink-0" />}
+                  <p className="text-[11px] text-slate-400 mt-2.5 leading-relaxed">
+                    {r.description}
+                  </p>
+
+                  <div className="mt-3 pt-2.5 border-t border-slate-800/80 flex flex-wrap gap-1">
+                    {r.permissions.slice(0, 3).map((perm, idx) => (
+                      <span key={idx} className="text-[9px] bg-slate-900 text-slate-300 px-1.5 py-0.5 rounded border border-slate-800">
+                        {perm}
+                      </span>
+                    ))}
+                    {r.permissions.length > 3 && (
+                      <span className="text-[9px] text-slate-500 py-0.5">+{r.permissions.length - 3} more</span>
+                    )}
+                  </div>
                 </div>
               );
             })}
           </div>
-        </div>
-
-        <div className="pt-2 border-t border-slate-800 flex justify-end">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-lg"
-          >
-            Close
-          </button>
         </div>
       </div>
     </div>

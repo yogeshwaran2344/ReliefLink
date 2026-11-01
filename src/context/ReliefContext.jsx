@@ -11,6 +11,7 @@ import { calculatePriorityScore, checkDuplicateRequest } from '../utils/aiEstima
 import { runResourceAllocation } from '../utils/allocationEngine';
 import { computeSurplusRedistribution } from '../utils/redistributionEngine';
 import { optimizeVehicleRoutes } from '../utils/routingOptimizer';
+import { correlateOperationalAlerts } from '../utils/alertCorrelationEngine';
 import { api } from '../services/apiClient';
 
 const ReliefContext = createContext();
@@ -49,45 +50,10 @@ export function ReliefProvider({ children }) {
     setToasts(prev => prev.filter(t => t.id !== id));
   };
 
-  // Smart In-App Notifications
-  const [notifications, setNotifications] = useState([
-    {
-      id: 'notif-1',
-      title: 'Critical Triage Alert: Camp A Water Shortage',
-      message: 'Camp A has exhausted safe drinking water reserves. 65 injured casualties reported.',
-      category: 'CRITICAL',
-      time: '10 mins ago',
-      read: false,
-      targetTab: 'priority'
-    },
-    {
-      id: 'notif-2',
-      title: 'Warehouse B Food Stock Depletion Alarm',
-      message: 'Warehouse B available food buffer (80 pkts) has breached safe threshold (350 pkts). Inter-depot surplus transfer recommended.',
-      category: 'INVENTORY',
-      time: '24 mins ago',
-      read: false,
-      targetTab: 'inventory'
-    },
-    {
-      id: 'notif-3',
-      title: 'Road Blockage: Highway 4 Western Bypass',
-      message: 'Arterial causeway submerged. Automated OR-Tools routing diverted convoys via Eastern Link Detour (+7.4 km).',
-      category: 'FLEET',
-      time: '45 mins ago',
-      read: false,
-      targetTab: 'routing'
-    },
-    {
-      id: 'notif-4',
-      title: 'Discrepancy Flagged: Delivery DEL-2026-001',
-      message: '10 food packets damaged by road splash; 5 medical kits short-shipped at loading bay.',
-      category: 'AUDIT',
-      time: '1 hr ago',
-      read: true,
-      targetTab: 'tracking'
-    }
-  ]);
+  // Smart In-App Notifications with Alert Correlation
+  const [notifications, setNotifications] = useState(() => 
+    correlateOperationalAlerts(INITIAL_LOCATIONS, INITIAL_WAREHOUSES, INITIAL_VEHICLES, ROAD_BLOCKAGES, INITIAL_DELIVERIES)
+  );
 
   const markNotificationRead = (id) => {
     setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
@@ -96,6 +62,58 @@ export function ReliefProvider({ children }) {
   const markAllNotificationsRead = () => {
     setNotifications(prev => prev.map(n => ({ ...n, read: true })));
     addToast('info', 'All operational alerts marked as read.', 'Notifications');
+  };
+
+  // Event-Driven Cascading Updates Engine
+  const triggerEventCascade = (eventType, payload) => {
+    addToast('warning', `Event Detected: ${eventType}. Commencing multi-stage cascade...`, 'Event-Driven Real-Time');
+
+    setTimeout(() => {
+      // Stage 1: Deplete depot inventory
+      setWarehouses(prev => prev.map(wh => {
+        if (wh.id === 'wh-1') {
+          return {
+            ...wh,
+            inventory: {
+              ...wh.inventory,
+              water: Math.max(50, (wh.inventory?.water || 1200) - 400)
+            }
+          };
+        }
+        return wh;
+      }));
+      addToast('info', 'Stage 1/4: Central Depot Alpha water buffer reduced by 400L.', 'Depot Adjusted');
+
+      setTimeout(() => {
+        // Stage 2: Recalculate allocations
+        const alloc = runResourceAllocation(camps, warehouses, vehicles);
+        setAllocationOutput(alloc);
+        addToast('warning', 'Stage 2/4: Affected allocations recalculated. Camp A flagged with critical water deficit.', 'Deficit Flagged');
+
+        setTimeout(() => {
+          // Stage 3: Dispatch correlated cluster alert
+          const newAlert = {
+            id: `cascade-${Date.now()}`,
+            isCorrelated: true,
+            category: 'Critical',
+            title: '🚨 CASCADING SHORTAGE: Camp A Water Depletion Alarm',
+            message: 'Depot Alpha water buffer exhaustion triggered supply chain cascade. Autonomous inter-depot surplus transfer from Warehouse Gamma recommended.',
+            assignedTo: 'Dr. Vikram Malhotra (Coordinator)',
+            timestamp: 'Just now',
+            escalationLevel: 3,
+            read: false,
+            targetTab: 'inventory'
+          };
+          setNotifications(prev => [newAlert, ...prev]);
+          addToast('error', 'Stage 3/4: Critical alert dispatched to Disaster Coordinator.', 'Alert Dispatched');
+
+          setTimeout(() => {
+            // Stage 4: Re-route and recommend
+            addToast('success', 'Stage 4/4: Autonomous recommendation: Route 400L from Depot Gamma to bypass chokepoint.', 'Cascade Resolved');
+          }, 800);
+        }, 800);
+      }, 800);
+    }, 400);
   };
 
   // Switch User Role (RBAC)
@@ -687,6 +705,7 @@ export function ReliefProvider({ children }) {
       addToast,
       removeToast,
       applySimulationScenario,
+      triggerEventCascade,
       allocationOutput,
       registerCamp,
       submitRequest,

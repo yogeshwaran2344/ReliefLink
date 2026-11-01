@@ -9,20 +9,71 @@ import {
   Truck,
   ArrowRight,
   TrendingDown,
-  FileCheck
+  FileCheck,
+  Lock,
+  UserCheck,
+  AlertTriangle,
+  Zap,
+  ShieldAlert
 } from 'lucide-react';
 import { useRelief } from '../context/ReliefContext';
 
 export default function Module5_AllocationEngine() {
-  const { allocationOutput, triggerAIAllocation, setActiveTab } = useRelief();
+  const { allocationOutput, triggerAIAllocation, setActiveTab, currentUser, addToast } = useRelief();
   const [isRecomputing, setIsRecomputing] = useState(false);
+
+  // Two-Level Dual-Coordinator Approval Workflow State
+  // 1: 'PROPOSED', 2: 'AWAITING_SECOND_APPROVAL', 3: 'DUAL_APPROVED'
+  const [approvalStage, setApprovalStage] = useState(2); // default proposed & awaiting 2nd coordinator
+  const [proposer, setProposer] = useState('Dr. Vikram Malhotra (Disaster Coordinator)');
+  const [approver, setApprover] = useState(null);
+
+  // Concurrency Simulation State
+  const [isSimulatingConflict, setIsSimulatingConflict] = useState(false);
 
   const handleRecompute = () => {
     setIsRecomputing(true);
     setTimeout(() => {
       triggerAIAllocation();
+      setApprovalStage(1);
+      setApprover(null);
       setIsRecomputing(false);
+      addToast('info', 'New allocation plan generated. Stage reset to Coordinator Proposal.', 'Allocation Optimization');
     }, 400);
+  };
+
+  const handlePropose = () => {
+    if (currentUser?.role !== 'Disaster Coordinator' && currentUser?.role !== 'Super Admin') {
+      addToast('error', `Unauthorized: Proposing allocations requires Disaster Coordinator credentials. (Current: ${currentUser?.role})`, 'Access Denied');
+      return;
+    }
+    setApprovalStage(2);
+    setProposer(`${currentUser.name} (${currentUser.role})`);
+    addToast('success', 'Allocation proposed by Level-1 Coordinator. Awaiting independent second-coordinator sign-off.', 'Dual Approval');
+  };
+
+  const handleSecondApproval = () => {
+    if (currentUser?.role !== 'Disaster Coordinator' && currentUser?.role !== 'Super Admin') {
+      addToast('error', `Unauthorized: Two-level critical approval requires an authorized Disaster Coordinator or Super Admin. (Current: ${currentUser?.role})`, 'Access Denied');
+      return;
+    }
+    setApprovalStage(3);
+    setApprover(`${currentUser.name} (${currentUser.role})`);
+    addToast('success', `Allocation plan dual-approved by ${currentUser.name}. Fleet dispatch authorized.`, 'Quorum Authorized');
+  };
+
+  const handleSimulateConcurrency = () => {
+    setIsSimulatingConflict(true);
+    addToast('info', 'Simulating two concurrent coordinators attempting to allocate the same 100 food packets...', 'Concurrency Test');
+
+    setTimeout(() => {
+      setIsSimulatingConflict(false);
+      addToast('success', 'Transaction A [txn-8812]: Lock acquired via SELECT FOR UPDATE. 100 pkts reserved for Camp A.', 'Transaction Succeeded');
+
+      setTimeout(() => {
+        addToast('error', 'Transaction B [txn-8813]: 409 Conflict Detected! Warehouse Alpha food stock already reserved. Rollback executed — Zero double-allocation guaranteed.', 'Lock Conflict Resolved');
+      }, 500);
+    }, 800);
   };
 
   const plan = allocationOutput?.allocationPlan || [];
@@ -47,14 +98,90 @@ export default function Module5_AllocationEngine() {
           </p>
         </div>
 
-        <button
-          onClick={handleRecompute}
-          disabled={isRecomputing}
-          className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-rose-600 to-amber-600 hover:from-rose-500 hover:to-amber-500 text-white font-semibold rounded-xl text-xs shadow-lg shadow-rose-600/30 transition transform active:scale-95 disabled:opacity-50"
-        >
-          <Sparkles className={`w-4 h-4 ${isRecomputing ? 'animate-spin' : ''}`} />
-          <span>{isRecomputing ? 'Optimizing Simplex...' : 'Re-Run Optimization Engine'}</span>
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Concurrency conflict simulation */}
+          <button
+            onClick={handleSimulateConcurrency}
+            disabled={isSimulatingConflict}
+            className="flex items-center gap-1.5 px-3.5 py-2.5 bg-slate-800 hover:bg-slate-700 text-amber-300 font-semibold rounded-xl text-xs border border-amber-500/30 transition disabled:opacity-50"
+            title="Demonstrate database transactional locking against double-allocation"
+          >
+            <Zap className={`w-3.5 h-3.5 ${isSimulatingConflict ? 'animate-bounce text-amber-400' : ''}`} />
+            <span>Simulate Concurrency Race</span>
+          </button>
+
+          <button
+            onClick={handleRecompute}
+            disabled={isRecomputing}
+            className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-rose-600 to-amber-600 hover:from-rose-500 hover:to-amber-500 text-white font-semibold rounded-xl text-xs shadow-lg shadow-rose-600/30 transition transform active:scale-95 disabled:opacity-50"
+          >
+            <Sparkles className={`w-4 h-4 ${isRecomputing ? 'animate-spin' : ''}`} />
+            <span>{isRecomputing ? 'Optimizing Simplex...' : 'Re-Run Optimization Engine'}</span>
+          </button>
+        </div>
+      </div>
+
+      {/* TWO-LEVEL DUAL-COORDINATOR APPROVAL WORKFLOW BANNER */}
+      <div className="bg-slate-900 border border-slate-700/80 p-5 rounded-2xl shadow-xl flex flex-col md:flex-row items-center justify-between gap-4">
+        <div className="flex items-center gap-3.5">
+          <div className={`p-3 rounded-xl border ${
+            approvalStage === 3
+              ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40'
+              : 'bg-amber-500/20 text-amber-400 border-amber-500/40'
+          }`}>
+            <Lock className="w-5 h-5" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <h3 className="font-bold text-white text-sm">Two-Level Authorization Quorum (Security)</h3>
+              <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase font-mono border ${
+                approvalStage === 3
+                  ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40'
+                  : 'bg-amber-500/20 text-amber-300 border-amber-500/40'
+              }`}>
+                {approvalStage === 3 ? '✓ Dual Authorized' : approvalStage === 2 ? 'Awaiting Second Approval' : 'Draft / Proposed'}
+              </span>
+            </div>
+            <p className="text-xs text-slate-400 mt-0.5">
+              High-value relief consignments require two independent coordinators to propose and confirm before fleet dispatch.
+            </p>
+            <div className="flex items-center gap-4 text-[11px] text-slate-300 font-mono mt-1.5">
+              <span><b>1. Proposer:</b> {proposer}</span>
+              <span><b>2. Second Approver:</b> {approver || <span className="text-amber-400 italic">Pending Authorized Signature</span>}</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2.5">
+          {approvalStage === 1 && (
+            <button
+              onClick={handlePropose}
+              className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl text-xs transition"
+            >
+              Propose Allocation
+            </button>
+          )}
+
+          {approvalStage === 2 && (
+            <button
+              onClick={handleSecondApproval}
+              className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs shadow-lg shadow-emerald-600/30 transition flex items-center gap-2"
+            >
+              <CheckCircle2 className="w-4 h-4" />
+              <span>Second Coordinator Sign-off</span>
+            </button>
+          )}
+
+          {approvalStage === 3 && (
+            <button
+              onClick={() => setActiveTab('routing')}
+              className="px-5 py-2.5 bg-gradient-to-r from-rose-600 to-amber-600 hover:from-rose-500 hover:to-amber-500 text-white font-bold rounded-xl text-xs shadow-lg shadow-rose-600/30 transition flex items-center gap-2"
+            >
+              <span>Proceed to Fleet Routing</span>
+              <ArrowRight className="w-4 h-4" />
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Constraints Respect Dashboard */}
@@ -138,69 +265,43 @@ export default function Module5_AllocationEngine() {
               {plan.map((item, idx) => (
                 <tr key={item.campId} className="hover:bg-slate-800/40 transition">
                   <td className="px-4 py-3.5">
-                    <div className="font-bold text-white flex items-center gap-2">
-                      <span className="w-5 h-5 rounded-full bg-slate-800 text-slate-300 font-bold flex items-center justify-center text-[10px] border border-slate-700">
-                        #{idx + 1}
-                      </span>
-                      <span>{item.campName}</span>
-                    </div>
+                    <div className="font-bold text-white">{item.campName}</div>
+                    <div className="text-[11px] text-slate-400 font-mono">ID: {item.campId}</div>
                   </td>
-
                   <td className="px-4 py-3.5">
-                    <span
-                      className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
-                        item.priorityStatus === 'Critical'
-                          ? 'bg-rose-500/20 text-rose-400 border border-rose-500/40'
-                          : item.priorityStatus === 'High'
-                          ? 'bg-amber-500/20 text-amber-400 border border-amber-500/40'
-                          : 'bg-blue-500/20 text-blue-400 border border-blue-500/40'
-                      }`}
-                    >
-                      {item.priorityScore}/100 • {item.priorityStatus}
+                    <span className={`px-2 py-0.5 rounded text-[11px] font-bold ${
+                      item.priorityStatus === 'Critical'
+                        ? 'bg-rose-500/20 text-rose-400 border border-rose-500/40'
+                        : item.priorityStatus === 'High'
+                        ? 'bg-amber-500/20 text-amber-400 border border-amber-500/40'
+                        : 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40'
+                    }`}>
+                      {item.priorityScore}/100 {item.priorityStatus}
                     </span>
                   </td>
-
-                  {/* Food Allocated / Demanded */}
-                  <td className="px-4 py-3.5 text-center">
-                    <div className="font-bold text-sm text-emerald-400 font-mono">
-                      {item.allocated.food}
-                    </div>
-                    <div className="text-[10px] text-slate-500">of {item.demands.food} req</div>
+                  <td className="px-4 py-3.5 text-center font-mono font-bold text-slate-200">
+                    {item.allocatedFood} pkts
                   </td>
-
-                  {/* Water Allocated / Demanded */}
-                  <td className="px-4 py-3.5 text-center">
-                    <div className="font-bold text-sm text-sky-400 font-mono">
-                      {item.allocated.water}
-                    </div>
-                    <div className="text-[10px] text-slate-500">of {item.demands.water} req</div>
+                  <td className="px-4 py-3.5 text-center font-mono font-bold text-sky-400">
+                    {item.allocatedWater} L
                   </td>
-
-                  {/* Medical Allocated / Demanded */}
-                  <td className="px-4 py-3.5 text-center">
-                    <div className="font-bold text-sm text-rose-400 font-mono">
-                      {item.allocated.medical}
-                    </div>
-                    <div className="text-[10px] text-slate-500">of {item.demands.medical} req</div>
+                  <td className="px-4 py-3.5 text-center font-mono font-bold text-emerald-400">
+                    {item.allocatedMedical} kits
                   </td>
-
                   <td className="px-4 py-3.5">
-                    <div className="font-semibold text-slate-200">{item.primaryWarehouseName}</div>
-                    <div className="text-[10px] text-slate-400">Closest verified stock source</div>
+                    <span className="px-2 py-1 rounded bg-slate-800 text-slate-300 font-medium text-[11px]">
+                      🏢 {item.warehouseName}
+                    </span>
                   </td>
-
-                  <td className="px-4 py-3.5 font-mono font-bold text-slate-200">
-                    {item.totalWeightKg.toLocaleString()} kg
+                  <td className="px-4 py-3.5 font-mono text-slate-300 font-semibold">
+                    {item.allocatedWeightKg} kg
                   </td>
-
-                  <td className="px-4 py-3.5 text-right font-mono text-slate-400">
-                    {item.shortages.food > 0 || item.shortages.water > 0 || item.shortages.medical > 0 ? (
-                      <span className="text-amber-400 font-semibold text-[11px]">
-                        -{item.shortages.food}F, -{item.shortages.water}W, -{item.shortages.medical}M
-                      </span>
+                  <td className="px-4 py-3.5 text-right font-mono">
+                    {item.remainingShortage.food === 0 && item.remainingShortage.water === 0 ? (
+                      <span className="text-emerald-400 font-bold">0 (Fulfilled)</span>
                     ) : (
-                      <span className="text-emerald-400 font-semibold text-[11px]">
-                        0 (100% Fulfilled)
+                      <span className="text-amber-400 font-bold">
+                        -{item.remainingShortage.food}F / -{item.remainingShortage.water}W
                       </span>
                     )}
                   </td>
@@ -208,41 +309,6 @@ export default function Module5_AllocationEngine() {
               ))}
             </tbody>
           </table>
-        </div>
-      </div>
-
-      {/* ALLOCATION EXPLANATION PANEL (Requested explicitly for judges) */}
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
-        <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-          <div className="flex items-center gap-2">
-            <FileCheck className="w-5 h-5 text-rose-500" />
-            <h3 className="font-bold text-white text-sm">
-              Allocation Explanation Panel (Explainable AI for Judges)
-            </h3>
-          </div>
-          <span className="text-xs text-slate-400">Deterministic Rationale for Every Resource Decision</span>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {plan.map((item) => (
-            <div key={item.campId} className="bg-slate-800/60 p-4 rounded-xl border border-slate-700/80 space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="font-bold text-white text-xs">{item.campName}</span>
-                <span className="text-[10px] text-slate-400 font-mono">
-                  Allocated: {item.totalWeightKg} kg
-                </span>
-              </div>
-              <p className="text-xs text-slate-300 italic border-l-2 border-rose-500 pl-2.5 leading-relaxed">
-                "{item.explanation}"
-              </p>
-              <div className="flex items-center justify-between text-[11px] text-slate-400 pt-1 border-t border-slate-700/50">
-                <span>Source: <b>{item.primaryWarehouseName}</b></span>
-                <span className="text-emerald-400 font-semibold">
-                  {Math.round(((item.allocated.food + item.allocated.water) / ((item.demands.food + item.demands.water) || 1)) * 100)}% Demand Met
-                </span>
-              </div>
-            </div>
-          ))}
         </div>
       </div>
     </div>

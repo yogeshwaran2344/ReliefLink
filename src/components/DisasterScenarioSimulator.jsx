@@ -12,7 +12,13 @@ import {
   ArrowRight,
   ShieldAlert,
   Zap,
-  Users
+  Users,
+  Building2,
+  BookmarkPlus,
+  Save,
+  Clock,
+  Layers,
+  Scale
 } from 'lucide-react';
 import { useRelief } from '../context/ReliefContext';
 
@@ -29,15 +35,27 @@ export default function DisasterScenarioSimulator({ isOpen, onClose }) {
 
   // Local state for scenario parameters
   const [severity, setSeverity] = useState('Severe'); // 'Moderate', 'Severe', 'Extreme'
-  const [popMultiplier, setPopMultiplier] = useState(1.2); // 1.0 to 2.5
-  const [blockHighway, setBlockHighway] = useState(false);
+  const [popMultiplier, setPopMultiplier] = useState(1.4); // 1.0 to 2.5
+  const [blockHighway, setBlockHighway] = useState(true);
+  const [offlineWarehouse, setOfflineWarehouse] = useState('none'); // 'none', 'wh-1', 'wh-2', 'wh-3'
   const [brokenVehicleId, setBrokenVehicleId] = useState('none'); // 'none', 'veh-1', 'veh-2', 'veh-3'
-  const [depleteWarehouseWater, setDepleteWarehouseWater] = useState(false);
-  const [activePreset, setActivePreset] = useState(null);
+  const [depleteWarehouseWater, setDepleteWarehouseWater] = useState(true);
+
+  // Simulation execution state
+  const [isSimulated, setIsSimulated] = useState(false);
+  const [savedScenarios, setSavedScenarios] = useState([
+    {
+      id: 'sc-1',
+      title: 'Midnight Flash Flood Surge',
+      timestamp: 'Today at 14:30',
+      popMultiplier: 1.4,
+      varianceSummary: '+40% Population, +30% Deficit, +24 mins ETA'
+    }
+  ]);
 
   if (!isOpen) return null;
 
-  // Preset scenarios for judges
+  // Preset scenarios for ideathon presentation
   const presets = [
     {
       id: 'p1',
@@ -47,43 +65,46 @@ export default function DisasterScenarioSimulator({ isOpen, onClose }) {
         severity: 'Extreme',
         popMultiplier: 1.4,
         blockHighway: true,
+        offlineWarehouse: 'none',
         brokenVehicleId: 'none',
-        depleteWarehouseWater: false
+        depleteWarehouseWater: true
       }
     },
     {
       id: 'p2',
-      title: 'Preset 2: Mountain Mudslide & Fleet Breakdown',
-      desc: 'Highway 4 blocked by debris; All-Terrain Truck RL-02 suffers transmission failure in transit.',
+      title: 'Preset 2: Arterial Logistics Chokepoint',
+      desc: 'Highway 4 Western Bypass bridge collapses; heavy truck RL-01 suffers axle breakdown during transit.',
       config: {
         severity: 'Severe',
-        popMultiplier: 1.1,
+        popMultiplier: 1.2,
         blockHighway: true,
-        brokenVehicleId: 'veh-2',
+        offlineWarehouse: 'none',
+        brokenVehicleId: 'veh-1',
         depleteWarehouseWater: false
       }
     },
     {
       id: 'p3',
-      title: 'Preset 3: Acute Regional Water Crisis',
-      desc: 'Northern Hub water supply compromised; requires emergency surplus reallocation from Central Depot.',
+      title: 'Preset 3: Central Depot Flooding Catastrophe',
+      desc: 'Central Depot Alpha is submerged and rendered offline; all allocations must shift to Depot Beta and Gamma.',
       config: {
-        severity: 'Severe',
-        popMultiplier: 1.0,
-        blockHighway: false,
-        brokenVehicleId: 'none',
+        severity: 'Extreme',
+        popMultiplier: 1.5,
+        blockHighway: true,
+        offlineWarehouse: 'wh-1',
+        brokenVehicleId: 'veh-2',
         depleteWarehouseWater: true
       }
     }
   ];
 
-  const handleApplyPreset = (preset) => {
-    setActivePreset(preset.id);
-    setSeverity(preset.config.severity);
-    setPopMultiplier(preset.config.popMultiplier);
-    setBlockHighway(preset.config.blockHighway);
-    setBrokenVehicleId(preset.config.brokenVehicleId);
-    setDepleteWarehouseWater(preset.config.depleteWarehouseWater);
+  const handleApplyPreset = (p) => {
+    setSeverity(p.config.severity);
+    setPopMultiplier(p.config.popMultiplier);
+    setBlockHighway(p.config.blockHighway);
+    setOfflineWarehouse(p.config.offlineWarehouse);
+    setBrokenVehicleId(p.config.brokenVehicleId);
+    setDepleteWarehouseWater(p.config.depleteWarehouseWater);
   };
 
   const handleRunSimulation = () => {
@@ -91,267 +112,334 @@ export default function DisasterScenarioSimulator({ isOpen, onClose }) {
       severity,
       popMultiplier,
       blockHighway,
+      offlineWarehouse,
       brokenVehicleId,
       depleteWarehouseWater
     });
-
-    addToast('warning', `Disaster Simulation Enacted: [${severity} Severity, ${(popMultiplier * 100).toFixed(0)}% Pop Scale]. All 8 modules recomputed!`, 'Scenario Live');
-    if (onClose) onClose();
+    setIsSimulated(true);
+    addToast('warning', 'What-If Disaster Simulation executed. Side-by-side variance analysis generated.', 'Simulation Active');
   };
 
-  const handleReset = () => {
+  const handleSaveScenario = () => {
+    const newSc = {
+      id: `sc-${Date.now()}`,
+      title: `Scenario: ${severity} Surge (Pop x${popMultiplier})`,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      popMultiplier,
+      varianceSummary: `Severity ${severity}, Road Blocked: ${blockHighway ? 'Yes' : 'No'}, Offline Depot: ${offlineWarehouse}`
+    };
+    setSavedScenarios(prev => [newSc, ...prev]);
+    addToast('success', 'Simulation scenario saved to presentation briefing gallery.', 'Scenario Saved');
+  };
+
+  const handleResetToBaseline = () => {
     resetDemoData();
-    setSeverity('Severe');
-    setPopMultiplier(1.0);
-    setBlockHighway(false);
-    setBrokenVehicleId('none');
-    setDepleteWarehouseWater(false);
-    setActivePreset(null);
-    addToast('info', 'Operational grid restored to baseline 5 camps, 3 warehouses, 3 vehicles.', 'Reset Complete');
+    setIsSimulated(false);
+    addToast('info', 'Reset to baseline standard operational disaster state (5 Camps / 3 Warehouses / 3 Vehicles).', 'Reset Complete');
   };
+
+  // Comparative Metrics calculation
+  const basePop = 4450;
+  const simPop = Math.round(basePop * popMultiplier);
+  const baseShortage = 18;
+  const simShortage = Math.min(85, Math.round(baseShortage * popMultiplier * (depleteWarehouseWater ? 1.6 : 1.2)));
+  const baseLatency = 28;
+  const simLatency = baseLatency + (blockHighway ? 24 : 0) + (offlineWarehouse !== 'none' ? 18 : 0);
+  const baseCritCamps = 2;
+  const simCritCamps = severity === 'Extreme' ? 4 : 3;
 
   return (
-    <div className="fixed inset-0 bg-black/85 z-[3000] flex items-center justify-center p-4 backdrop-blur-md overflow-y-auto">
-      <div className="bg-slate-900 border border-indigo-500/40 rounded-2xl max-w-4xl w-full overflow-hidden shadow-2xl p-6 space-y-6 my-8" onClick={e => e.stopPropagation()}>
+    <div className="fixed inset-0 bg-black/80 z-[2700] flex items-center justify-center p-4 backdrop-blur-md" onClick={onClose}>
+      <div
+        className="w-full max-w-4xl bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh]"
+        onClick={e => e.stopPropagation()}
+      >
         {/* Modal Header */}
-        <div className="flex items-center justify-between border-b border-slate-800 pb-4">
+        <div className="px-6 py-4 bg-gradient-to-r from-slate-900 via-amber-950/40 to-slate-900 border-b border-slate-800 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="p-2.5 bg-indigo-500/20 rounded-xl text-indigo-400 border border-indigo-500/30">
-              <Zap className="w-6 h-6 animate-pulse" />
+            <div className="p-2.5 bg-gradient-to-tr from-amber-500 to-rose-500 text-white rounded-xl shadow-lg shadow-amber-500/20">
+              <Zap className="w-5 h-5 animate-pulse" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-300 text-[10px] font-extrabold uppercase tracking-wider border border-indigo-500/40">
-                  Judges' Interactive Sandbox
+                <h2 className="text-lg font-bold text-white">
+                  Disaster Response What-If Engine
+                </h2>
+                <span className="text-[10px] font-mono font-bold bg-amber-500/20 text-amber-400 px-2 py-0.5 rounded border border-amber-500/30 uppercase">
+                  Multi-Factor Stress Test
                 </span>
-                <span className="text-xs text-slate-400">Physical AI Dynamic Stress-Testing</span>
               </div>
-              <h2 className="text-xl font-extrabold text-white">
-                What-If Disaster Scenario Simulator
-              </h2>
+              <p className="text-xs text-slate-400">
+                Stress-test the autonomous logistics engine under catastrophic multi-variable conditions without altering live production databases.
+              </p>
             </div>
           </div>
-
           <button
             onClick={onClose}
-            className="text-slate-400 hover:text-white text-base p-1.5 rounded-lg hover:bg-slate-800 transition"
+            className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition"
           >
             ✕
           </button>
         </div>
 
-        {/* Quick Presets for Demo */}
-        <div className="space-y-2">
-          <span className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
-            <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
-            Instant Scenario Presets for Presentations:
-          </span>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            {presets.map(p => (
-              <div
-                key={p.id}
-                onClick={() => handleApplyPreset(p)}
-                className={`p-3 rounded-xl border cursor-pointer transition-all ${
-                  activePreset === p.id
-                    ? 'bg-indigo-950/60 border-indigo-400 ring-1 ring-indigo-400'
-                    : 'bg-slate-800/60 border-slate-700/80 hover:bg-slate-800 hover:border-slate-600'
-                }`}
-              >
-                <div className="font-bold text-xs text-white mb-1">{p.title}</div>
-                <p className="text-[11px] text-slate-300 leading-snug">{p.desc}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Interactive Custom Controls */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 bg-slate-950/60 p-4 rounded-xl border border-slate-800 text-xs">
-          {/* Parameter 1: Disaster Severity */}
-          <div className="space-y-2">
-            <label className="font-bold text-slate-200 flex items-center gap-1.5">
-              <Flame className="w-4 h-4 text-rose-400" />
-              <span>1. Regional Disaster Severity</span>
-            </label>
-            <div className="grid grid-cols-3 gap-2">
-              {['Moderate', 'Severe', 'Extreme'].map((level) => (
+        {/* Modal Body */}
+        <div className="p-6 overflow-y-auto space-y-6 flex-1 text-xs text-slate-200">
+          {/* Quick Presets for Ideathon Judges */}
+          <div>
+            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-2">
+              ⚡ Instant Stress-Test Presets (Judges Demonstration):
+            </span>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5">
+              {presets.map((p) => (
                 <button
-                  key={level}
-                  type="button"
-                  onClick={() => setSeverity(level)}
-                  className={`py-2 rounded-lg font-bold text-xs transition ${
-                    severity === level
-                      ? level === 'Extreme'
-                        ? 'bg-rose-600 text-white shadow-lg shadow-rose-600/30'
-                        : level === 'Severe'
-                        ? 'bg-amber-600 text-white'
-                        : 'bg-blue-600 text-white'
-                      : 'bg-slate-800 text-slate-400 hover:text-white'
-                  }`}
+                  key={p.id}
+                  onClick={() => handleApplyPreset(p)}
+                  className="p-3 rounded-xl bg-slate-950/70 border border-slate-800 hover:border-amber-500/50 hover:bg-slate-800/60 transition text-left group"
                 >
-                  {level}
+                  <div className="font-bold text-white group-hover:text-amber-400 text-xs">
+                    {p.title}
+                  </div>
+                  <div className="text-[11px] text-slate-400 mt-1 line-clamp-2 leading-relaxed">
+                    {p.desc}
+                  </div>
                 </button>
               ))}
             </div>
-            <span className="text-[10px] text-slate-400 block">
-              Directly influences algorithm casualty surge factor and camp priority index weighting.
-            </span>
           </div>
 
-          {/* Parameter 2: Population Surge */}
-          <div className="space-y-2">
-            <div className="flex justify-between font-bold text-slate-200">
-              <span className="flex items-center gap-1.5">
-                <Users className="w-4 h-4 text-blue-400" />
-                2. Evacuee Population Surge Factor
-              </span>
-              <span className="text-indigo-400 font-mono">{(popMultiplier * 100).toFixed(0)}% (x{popMultiplier.toFixed(1)})</span>
-            </div>
-            <input
-              type="range"
-              min="1.0"
-              max="2.2"
-              step="0.1"
-              value={popMultiplier}
-              onChange={e => setPopMultiplier(parseFloat(e.target.value))}
-              className="w-full accent-indigo-500 cursor-pointer"
-            />
-            <div className="flex justify-between text-[10px] text-slate-500 font-mono">
-              <span>Baseline (100%)</span>
-              <span>Moderate (+50%)</span>
-              <span>Crisis Spike (+120%)</span>
+          {/* Interactive Multi-Factor Sliders & Toggles */}
+          <div className="p-5 bg-slate-950 rounded-2xl border border-slate-800 space-y-4">
+            <h3 className="font-bold text-white text-xs uppercase tracking-wider flex items-center gap-2">
+              <Sliders className="w-4 h-4 text-amber-400" />
+              Scenario Control Parameters
+            </h3>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              {/* Population Multiplier */}
+              <div>
+                <div className="flex justify-between items-center mb-1.5">
+                  <span className="text-slate-300 font-semibold flex items-center gap-1.5">
+                    <Users className="w-3.5 h-3.5 text-sky-400" /> Displaced Population Surge:
+                  </span>
+                  <span className="font-mono text-amber-400 font-bold bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">
+                    +{Math.round((popMultiplier - 1.0) * 100)}% ({simPop.toLocaleString()} people)
+                  </span>
+                </div>
+                <input
+                  type="range"
+                  min="1.0"
+                  max="2.5"
+                  step="0.1"
+                  value={popMultiplier}
+                  onChange={(e) => setPopMultiplier(parseFloat(e.target.value))}
+                  className="w-full accent-amber-500 bg-slate-800 rounded-lg cursor-pointer"
+                />
+              </div>
+
+              {/* Disaster Severity */}
+              <div>
+                <span className="text-slate-300 font-semibold block mb-1.5">
+                  Incident Weather Severity:
+                </span>
+                <div className="grid grid-cols-3 gap-2">
+                  {['Moderate', 'Severe', 'Extreme'].map((lvl) => (
+                    <button
+                      key={lvl}
+                      onClick={() => setSeverity(lvl)}
+                      className={`py-1.5 rounded-lg font-bold text-xs transition ${
+                        severity === lvl
+                          ? 'bg-rose-600 text-white shadow-md'
+                          : 'bg-slate-800 text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      {lvl}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Road Hazard Toggle */}
+              <div className="flex items-center justify-between p-3 rounded-xl bg-slate-900 border border-slate-800">
+                <div>
+                  <span className="font-semibold text-white block">Highway 4 Causeway Blockage</span>
+                  <span className="text-[10px] text-slate-400">Forces OR-Tools detour via Eastern Link (+7.4 km)</span>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={blockHighway}
+                  onChange={(e) => setBlockHighway(e.target.checked)}
+                  className="w-5 h-5 accent-rose-500 rounded cursor-pointer"
+                />
+              </div>
+
+              {/* Deplete Water Supplies */}
+              <div className="flex items-center justify-between p-3 rounded-xl bg-slate-900 border border-slate-800">
+                <div>
+                  <span className="font-semibold text-white block">Regional Potable Water Deficit</span>
+                  <span className="text-[10px] text-slate-400">Simulate -60% drop in depot drinking water reserves</span>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={depleteWarehouseWater}
+                  onChange={(e) => setDepleteWarehouseWater(e.target.checked)}
+                  className="w-5 h-5 accent-sky-500 rounded cursor-pointer"
+                />
+              </div>
+
+              {/* Warehouse Failure */}
+              <div>
+                <span className="text-slate-300 font-semibold block mb-1">Simulate Warehouse Failure:</span>
+                <select
+                  value={offlineWarehouse}
+                  onChange={(e) => setOfflineWarehouse(e.target.value)}
+                  className="w-full bg-slate-900 border border-slate-700 text-slate-200 rounded-lg p-2 text-xs focus:outline-none"
+                >
+                  <option value="none">All Warehouses Fully Operational</option>
+                  <option value="wh-1">Warehouse Alpha Offline (Submerged Depot)</option>
+                  <option value="wh-2">Warehouse Beta Offline (Power Grid Failure)</option>
+                  <option value="wh-3">Warehouse Gamma Offline (Access Road Blocked)</option>
+                </select>
+              </div>
+
+              {/* Vehicle Breakdown */}
+              <div>
+                <span className="text-slate-300 font-semibold block mb-1">Simulate Fleet Breakdown:</span>
+                <select
+                  value={brokenVehicleId}
+                  onChange={(e) => setBrokenVehicleId(e.target.value)}
+                  className="w-full bg-slate-900 border border-slate-700 text-slate-200 rounded-lg p-2 text-xs focus:outline-none"
+                >
+                  <option value="none">All 3 Fleet Vehicles Operational</option>
+                  <option value="veh-1">RL-01 Heavy Truck Breakdown (Axle Failure)</option>
+                  <option value="veh-2">RL-02 Medium Carrier Out of Service</option>
+                  <option value="veh-3">RL-03 High-Clearance Van Stalled</option>
+                </select>
+              </div>
             </div>
           </div>
 
-          {/* Parameter 3: Infrastructure Hazard (Road Blockage) */}
-          <div className="space-y-2">
-            <label className="font-bold text-slate-200 flex items-center gap-1.5">
-              <AlertTriangle className="w-4 h-4 text-amber-400" />
-              <span>3. Route Arterial Infrastructure</span>
-            </label>
+          {/* Action Execution Buttons */}
+          <div className="flex flex-wrap items-center justify-between gap-3">
             <button
-              type="button"
-              onClick={() => setBlockHighway(!blockHighway)}
-              className={`w-full py-2.5 px-3 rounded-lg border font-semibold flex items-center justify-between transition ${
-                blockHighway
-                  ? 'bg-amber-500/20 border-amber-500/60 text-amber-300'
-                  : 'bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-750'
-              }`}
+              onClick={handleResetToBaseline}
+              className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-750 text-slate-300 hover:text-white font-semibold flex items-center gap-2 border border-slate-700 transition"
             >
-              <span>Highway 4 Bypass Flooded (Near Mile 14)</span>
-              <span className={`text-[10px] px-2 py-0.5 rounded font-bold uppercase ${
-                blockHighway ? 'bg-amber-500 text-slate-950' : 'bg-slate-700 text-slate-300'
+              <RotateCcw className="w-4 h-4" />
+              <span>Reset to Baseline (5 Camps / 3 Depots)</span>
+            </button>
+
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleSaveScenario}
+                className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-300 font-bold flex items-center gap-2 border border-amber-500/30 transition"
+              >
+                <Save className="w-4 h-4" />
+                <span>Save to Briefing Gallery</span>
+              </button>
+
+              <button
+                onClick={handleRunSimulation}
+                className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-amber-600 via-rose-600 to-rose-500 hover:from-amber-500 hover:to-rose-400 text-white font-bold flex items-center gap-2 shadow-lg shadow-rose-600/30 transition transform active:scale-95"
+              >
+                <Sparkles className="w-4 h-4" />
+                <span>Run What-If Simulation Engine</span>
+              </button>
+            </div>
+          </div>
+
+          {/* SIDE-BY-SIDE BEFORE VS AFTER COMPARATIVE ANALYSIS */}
+          <div className="p-5 bg-gradient-to-r from-slate-950 via-slate-900 to-slate-950 rounded-2xl border border-rose-500/40 shadow-xl space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <div className="flex items-center gap-2">
+                <Scale className="w-5 h-5 text-amber-400" />
+                <div>
+                  <h3 className="font-bold text-white text-sm">
+                    Before vs. After Comparative Impact Analysis
+                  </h3>
+                  <span className="text-[10px] text-slate-400">
+                    Direct mathematical variance between Live Production Baseline and What-If Scenario
+                  </span>
+                </div>
+              </div>
+              <span className={`px-2.5 py-0.5 rounded text-[10px] font-bold uppercase font-mono ${
+                isSimulated ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40' : 'bg-slate-800 text-slate-400'
               }`}>
-                {blockHighway ? 'Blocked (+7.4 km Detour)' : 'Clear'}
+                {isSimulated ? 'Simulated Variance Mode' : 'Baseline Active'}
               </span>
-            </button>
-          </div>
-
-          {/* Parameter 4: Vehicle Fleet Status */}
-          <div className="space-y-2">
-            <label className="font-bold text-slate-200 flex items-center gap-1.5">
-              <Truck className="w-4 h-4 text-purple-400" />
-              <span>4. Fleet Readiness & Breakdowns</span>
-            </label>
-            <select
-              value={brokenVehicleId}
-              onChange={e => setBrokenVehicleId(e.target.value)}
-              className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white text-xs"
-            >
-              <option value="none">All 3 Vehicles Fully Operational (2,800 kg total)</option>
-              <option value="veh-2">Simulate Breakdown: Off-Road Truck RL-02 (Offline)</option>
-              <option value="veh-3">Simulate Breakdown: Transit Van RL-03 (Offline)</option>
-              <option value="veh-1">Simulate Breakdown: Heavy Truck RL-01 (Offline)</option>
-            </select>
-            <span className="text-[10px] text-slate-400 block">
-              Tests algorithmic redistribution of payload to remaining available fleet units without capacity overflow.
-            </span>
-          </div>
-
-          {/* Parameter 5: Depot Depletion */}
-          <div className="md:col-span-2 space-y-2 pt-2 border-t border-slate-800">
-            <label className="font-bold text-slate-200 flex items-center gap-1.5">
-              <Droplets className="w-4 h-4 text-blue-400" />
-              <span>5. Depot Stockout Stress-Test</span>
-            </label>
-            <button
-              type="button"
-              onClick={() => setDepleteWarehouseWater(!depleteWarehouseWater)}
-              className={`w-full py-2.5 px-3 rounded-lg border font-semibold flex items-center justify-between transition ${
-                depleteWarehouseWater
-                  ? 'bg-rose-500/20 border-rose-500/60 text-rose-300'
-                  : 'bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-750'
-              }`}
-            >
-              <span>Warehouse B (Northern Relief Base) Running Out of Drinking Water</span>
-              <span className={`text-[10px] px-2 py-0.5 rounded font-bold uppercase ${
-                depleteWarehouseWater ? 'bg-rose-500 text-white' : 'bg-slate-700 text-slate-300'
-              }`}>
-                {depleteWarehouseWater ? 'Water Buffer Critical (0 L)' : 'Stock Nominal'}
-              </span>
-            </button>
-          </div>
-        </div>
-
-        {/* Expected System Response Telemetry */}
-        <div className="bg-slate-800/80 p-3.5 rounded-xl border border-slate-700 text-xs text-slate-300 space-y-1.5">
-          <span className="font-bold text-indigo-400 uppercase tracking-wide text-[11px] block">
-            System Algorithmic Reaction Pipeline:
-          </span>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[11px]">
-            <div className="bg-slate-900/80 p-2 rounded border border-slate-800">
-              <span className="text-slate-400 block text-[10px]">Priority Score:</span>
-              <b className={severity === 'Extreme' ? 'text-rose-400' : 'text-amber-400'}>
-                {severity === 'Extreme' ? '▲ Surges to 99' : 'Recalculated'}
-              </b>
             </div>
-            <div className="bg-slate-900/80 p-2 rounded border border-slate-800">
-              <span className="text-slate-400 block text-[10px]">Supply Demand:</span>
-              <b className="text-blue-400">
-                +{(popMultiplier * 100 - 100).toFixed(0)}% Rations Needed
-              </b>
-            </div>
-            <div className="bg-slate-900/80 p-2 rounded border border-slate-800">
-              <span className="text-slate-400 block text-[10px]">Fleet Capacity:</span>
-              <b className={brokenVehicleId !== 'none' ? 'text-rose-400' : 'text-emerald-400'}>
-                {brokenVehicleId !== 'none' ? 'Auto-Reassigned' : '0% Overload Safe'}
-              </b>
-            </div>
-            <div className="bg-slate-900/80 p-2 rounded border border-slate-800">
-              <span className="text-slate-400 block text-[10px]">Route Detour:</span>
-              <b className={blockHighway ? 'text-amber-400' : 'text-slate-300'}>
-                {blockHighway ? '+7.4 km Bypass' : 'Direct Corridors'}
-              </b>
-            </div>
-          </div>
-        </div>
 
-        {/* Action Buttons */}
-        <div className="flex items-center justify-between pt-3 border-t border-slate-800">
-          <button
-            type="button"
-            onClick={handleReset}
-            className="flex items-center gap-1.5 px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs font-semibold transition"
-          >
-            <RotateCcw className="w-3.5 h-3.5" />
-            <span>Reset Simulation Baseline</span>
-          </button>
+            {/* 4 Comparative Metric Cards */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <div className="bg-slate-900/90 p-3 rounded-xl border border-slate-800">
+                <span className="text-slate-400 text-[10px] uppercase font-bold block mb-1">
+                  Displaced Population
+                </span>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-slate-400 line-through text-xs font-mono">{basePop}</span>
+                  <ArrowRight className="w-3 h-3 text-slate-600" />
+                  <span className="text-amber-400 font-bold text-sm font-mono">{simPop}</span>
+                </div>
+                <span className="text-[10px] text-rose-400 font-semibold block mt-0.5">
+                  +{Math.round((popMultiplier - 1.0) * 100)}% Surge Deficit
+                </span>
+              </div>
 
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs font-semibold"
-            >
-              Cancel
-            </button>
-            <button
-              type="button"
-              onClick={handleRunSimulation}
-              className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-indigo-600 via-rose-600 to-amber-600 hover:from-indigo-500 hover:to-amber-500 text-white rounded-lg text-xs font-bold shadow-lg shadow-indigo-600/30 transition transform active:scale-95"
-            >
-              <Zap className="w-4 h-4" />
-              <span>Run Disaster Simulation & Recalculate All Modules</span>
-            </button>
+              <div className="bg-slate-900/90 p-3 rounded-xl border border-slate-800">
+                <span className="text-slate-400 text-[10px] uppercase font-bold block mb-1">
+                  Critical Priority Camps
+                </span>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-slate-400 line-through text-xs font-mono">{baseCritCamps} Camps</span>
+                  <ArrowRight className="w-3 h-3 text-slate-600" />
+                  <span className="text-rose-400 font-bold text-sm font-mono">{simCritCamps} Camps</span>
+                </div>
+                <span className="text-[10px] text-rose-400 font-semibold block mt-0.5">
+                  +{simCritCamps - baseCritCamps} Critical Escalations
+                </span>
+              </div>
+
+              <div className="bg-slate-900/90 p-3 rounded-xl border border-slate-800">
+                <span className="text-slate-400 text-[10px] uppercase font-bold block mb-1">
+                  Avg Transit Latency
+                </span>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-slate-400 line-through text-xs font-mono">{baseLatency} mins</span>
+                  <ArrowRight className="w-3 h-3 text-slate-600" />
+                  <span className="text-amber-300 font-bold text-sm font-mono">{simLatency} mins</span>
+                </div>
+                <span className="text-[10px] text-amber-400 font-semibold block mt-0.5">
+                  +{simLatency - baseLatency} mins Detour Delay
+                </span>
+              </div>
+
+              <div className="bg-slate-900/90 p-3 rounded-xl border border-slate-800">
+                <span className="text-slate-400 text-[10px] uppercase font-bold block mb-1">
+                  Overall Unmet Shortage
+                </span>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-slate-400 line-through text-xs font-mono">{baseShortage}%</span>
+                  <ArrowRight className="w-3 h-3 text-slate-600" />
+                  <span className="text-rose-500 font-bold text-sm font-mono">{simShortage}%</span>
+                </div>
+                <span className="text-[10px] text-rose-400 font-semibold block mt-0.5">
+                  +{simShortage - baseShortage}% Supply Deficit
+                </span>
+              </div>
+            </div>
+
+            {/* Additional Fleet / Inventory Resources Required Card */}
+            <div className="p-3.5 rounded-xl bg-amber-950/20 border border-amber-500/30 flex items-start gap-3">
+              <AlertTriangle className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
+              <div className="space-y-1">
+                <span className="font-bold text-amber-300 text-xs block">
+                  Autonomous Recommended Mitigation Strategy:
+                </span>
+                <p className="text-[11px] text-slate-300 leading-relaxed">
+                  To eliminate the simulated +{simShortage - baseShortage}% deficit under this scenario, ReliefLink recommends:
+                  <b> Requesting 2 additional mutual-aid 10-Ton vehicles</b> and activating <b>inter-state surplus transfer of 1,200L potable water from regional reservoir depots</b>.
+                </p>
+              </div>
+            </div>
           </div>
         </div>
       </div>

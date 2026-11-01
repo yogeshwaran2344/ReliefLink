@@ -18,7 +18,7 @@ import { useRelief } from '../context/ReliefContext';
 import { computeSurplusRedistribution } from '../utils/redistributionEngine';
 
 export default function Module4_WarehouseInventory() {
-  const { warehouses, camps, executeSurplusTransfer } = useRelief();
+  const { warehouses, camps, executeSurplusTransfer, triggerEventCascade } = useRelief();
 
   const [selectedWarehouseId, setSelectedWarehouseId] = useState(warehouses[0]?.id || 'wh-alpha');
   const [transferSuccessMessage, setTransferSuccessMessage] = useState(null);
@@ -52,6 +52,15 @@ export default function Module4_WarehouseInventory() {
             Real-time multi-depot stock monitoring, expiry date tracking, automatic low-stock alarms, and algorithmic inter-warehouse balancing.
           </p>
         </div>
+
+        <button
+          onClick={() => triggerEventCascade('Depot Alpha Water Depleted by 400L')}
+          className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-amber-600 to-rose-600 hover:from-amber-500 hover:to-rose-500 text-white font-bold rounded-xl text-xs shadow-lg shadow-rose-600/20 transition transform active:scale-95"
+          title="Simulate sudden depot stock change and observe automatic multi-module recalculation cascade"
+        >
+          <Sparkles className="w-4 h-4" />
+          <span>⚡ Trigger Event Cascade Demo</span>
+        </button>
       </div>
 
       {/* SUCCESS BANNER FOR TRANSFERS */}

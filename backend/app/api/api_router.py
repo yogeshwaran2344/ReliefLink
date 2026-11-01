@@ -9,7 +9,9 @@ from app.api.v1 import (
     routes,
     deliveries,
     dashboard,
-    reports
+    reports,
+    events,
+    copilot
 )
 
 api_router = APIRouter()
@@ -24,3 +26,5 @@ api_router.include_router(routes.router)
 api_router.include_router(deliveries.router)
 api_router.include_router(dashboard.router)
 api_router.include_router(reports.router)
+api_router.include_router(events.router)
+api_router.include_router(copilot.router)

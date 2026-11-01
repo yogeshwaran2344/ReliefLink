@@ -15,11 +15,21 @@ import {
   Bell,
   User,
   ShieldAlert,
-  Coins
+  Coins,
+  Search,
+  Activity,
+  QrCode
 } from 'lucide-react';
 import { useRelief } from '../context/ReliefContext';
 
-export default function Navbar({ onOpenSimulator, onOpenRoleModal, onOpenNotif }) {
+export default function Navbar({
+  onOpenSimulator,
+  onOpenRoleModal,
+  onOpenNotif,
+  onOpenSearch,
+  onOpenTwin,
+  onOpenQR
+}) {
   const {
     activeTab,
     setActiveTab,
@@ -59,7 +69,16 @@ export default function Navbar({ onOpenSimulator, onOpenRoleModal, onOpenNotif }
           <span className="font-bold tracking-wider uppercase text-rose-300">CRISIS OPERATIONAL STATUS:</span>
           <span>Level-3 Coastal Surge & Monsoon Flood Incident Active | 5 Affected Camps | 3 Depots Online</span>
         </div>
-        <div className="flex items-center gap-2.5 mt-1 sm:mt-0">
+        <div className="flex items-center gap-2 mt-1 sm:mt-0">
+          {/* Innovations & Digital Twin Button */}
+          <button
+            onClick={onOpenTwin}
+            className="px-2.5 py-0.5 rounded text-[11px] font-bold transition-all flex items-center gap-1.5 bg-purple-600/80 hover:bg-purple-600 text-purple-100 border border-purple-400/40 shadow-sm"
+          >
+            <Activity className="w-3 h-3 text-purple-200" />
+            <span>⚡ Digital Twin & Predictor</span>
+          </button>
+
           {/* What-If Simulator Button */}
           <button
             onClick={onOpenSimulator}
@@ -115,10 +134,23 @@ export default function Navbar({ onOpenSimulator, onOpenRoleModal, onOpenNotif }
             </div>
           </div>
 
-          {/* Right Header Action Items: Backend Status, Notification Bell, RBAC User Pill */}
-          <div className="flex items-center gap-3 text-xs text-slate-300">
+          {/* Right Header Action Items */}
+          <div className="flex items-center gap-2.5 text-xs text-slate-300">
+            {/* Omni-Search Command Palette Button */}
+            <button
+              onClick={onOpenSearch}
+              className="flex items-center gap-2 bg-slate-800/90 hover:bg-slate-800 px-3 py-1.5 rounded-lg border border-slate-700 text-slate-400 hover:text-slate-200 transition group"
+              title="Command Palette & Quick Search (Ctrl+K)"
+            >
+              <Search className="w-3.5 h-3.5 text-rose-400 group-hover:scale-110 transition" />
+              <span className="hidden md:inline text-slate-300 text-[11px]">Command Search...</span>
+              <kbd className="hidden sm:inline-block text-[10px] bg-slate-950 px-1.5 py-0.5 rounded border border-slate-700 font-mono text-slate-400">
+                Ctrl+K
+              </kbd>
+            </button>
+
             {/* Backend Connectivity Badge */}
-            <div className={`hidden md:flex px-2.5 py-1.5 rounded-lg items-center gap-2 border text-[11px] ${
+            <div className={`hidden lg:flex px-2.5 py-1.5 rounded-lg items-center gap-2 border text-[11px] ${
               backendConnected
                 ? 'bg-emerald-950/40 border-emerald-500/40 text-emerald-300'
                 : 'bg-amber-950/40 border-amber-500/40 text-amber-300'
@@ -131,7 +163,7 @@ export default function Navbar({ onOpenSimulator, onOpenRoleModal, onOpenNotif }
             <button
               onClick={onOpenNotif}
               className="relative p-2 rounded-lg bg-slate-800/80 hover:bg-slate-800 border border-slate-700 text-slate-300 hover:text-white transition"
-              title="Notifications & Smart Alerts"
+              title="Notifications & Smart Correlated Alerts"
             >
               <Bell className="w-4 h-4" />
               {unreadCount > 0 && (
@@ -145,7 +177,7 @@ export default function Navbar({ onOpenSimulator, onOpenRoleModal, onOpenNotif }
             <button
               onClick={onOpenRoleModal}
               className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-750 border border-slate-700 text-left transition group"
-              title="Switch RBAC Role (Admin, Coordinator, Warehouse Manager, etc.)"
+              title="Switch RBAC Role (Super Admin, Coordinator, Warehouse Manager, etc.)"
             >
               <div className="w-6 h-6 rounded-md bg-indigo-500/20 text-indigo-400 flex items-center justify-center font-bold text-xs border border-indigo-500/30">
                 {currentUser?.role?.charAt(0) || 'U'}

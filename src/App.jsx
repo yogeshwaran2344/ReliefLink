@@ -14,7 +14,11 @@ import ToastContainer from './components/ToastContainer';
 import DisasterScenarioSimulator from './components/DisasterScenarioSimulator';
 import RoleSwitcherModal from './components/RoleSwitcherModal';
 import NotificationCenter from './components/NotificationCenter';
-import { Terminal, Shield, ChevronUp, ChevronDown } from 'lucide-react';
+import CommandPalette from './components/CommandPalette';
+import AIAssistantDrawer from './components/AIAssistantDrawer';
+import InnovationTwinModal from './components/InnovationTwinModal';
+import QRVerificationModal from './components/QRVerificationModal';
+import { Terminal, Shield, ChevronUp, ChevronDown, Bot, Sparkles } from 'lucide-react';
 
 function MainContent() {
   const { activeTab, auditLogs } = useRelief();
@@ -24,6 +28,10 @@ function MainContent() {
   const [isSimulatorOpen, setIsSimulatorOpen] = useState(false);
   const [isRoleModalOpen, setIsRoleModalOpen] = useState(false);
   const [isNotifOpen, setIsNotifOpen] = useState(false);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [isAssistantOpen, setIsAssistantOpen] = useState(false);
+  const [isTwinOpen, setIsTwinOpen] = useState(false);
+  const [isQROpen, setIsQROpen] = useState(false);
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-rose-500 selection:text-white">
@@ -31,6 +39,9 @@ function MainContent() {
         onOpenSimulator={() => setIsSimulatorOpen(true)}
         onOpenRoleModal={() => setIsRoleModalOpen(true)}
         onOpenNotif={() => setIsNotifOpen(true)}
+        onOpenSearch={() => setIsSearchOpen(true)}
+        onOpenTwin={() => setIsTwinOpen(true)}
+        onOpenQR={() => setIsQROpen(true)}
       />
 
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
@@ -45,7 +56,7 @@ function MainContent() {
         {activeTab === 'ledger' && <AccountabilityLedger />}
       </main>
 
-      {/* Interactive Modals */}
+      {/* Interactive Enterprise Modals */}
       <DisasterScenarioSimulator
         isOpen={isSimulatorOpen}
         onClose={() => setIsSimulatorOpen(false)}
@@ -58,12 +69,42 @@ function MainContent() {
         isOpen={isNotifOpen}
         onClose={() => setIsNotifOpen(false)}
       />
+      <CommandPalette
+        isOpen={isSearchOpen}
+        onClose={() => setIsSearchOpen(false)}
+        onOpenSimulator={() => setIsSimulatorOpen(true)}
+        onOpenQR={() => setIsQROpen(true)}
+        onOpenRoleModal={() => setIsRoleModalOpen(true)}
+      />
+      <AIAssistantDrawer
+        isOpen={isAssistantOpen}
+        onClose={() => setIsAssistantOpen(false)}
+      />
+      <InnovationTwinModal
+        isOpen={isTwinOpen}
+        onClose={() => setIsTwinOpen(false)}
+      />
+      <QRVerificationModal
+        isOpen={isQROpen}
+        onClose={() => setIsQROpen(false)}
+      />
 
       {/* Floating System Toasts */}
       <ToastContainer />
 
+      {/* Floating AI Disaster Operations Copilot Trigger Button */}
+      <button
+        onClick={() => setIsAssistantOpen(true)}
+        className="fixed bottom-12 right-4 z-40 px-3.5 py-2 bg-gradient-to-r from-rose-600 via-indigo-600 to-purple-600 hover:from-rose-500 hover:to-purple-500 text-white rounded-full shadow-2xl flex items-center gap-2 text-xs font-bold border border-rose-400/40 transition transform hover:scale-105 active:scale-95"
+        title="Open ReliefLink Conversational Operations Assistant"
+      >
+        <Bot className="w-4 h-4 animate-bounce" />
+        <span className="hidden sm:inline">🤖 ReliefLink Copilot</span>
+        <span className="sm:hidden">Copilot</span>
+      </button>
+
       {/* Floating Real-Time Operational Audit Drawer */}
-      <div className="fixed bottom-0 right-4 z-40 w-96 max-w-[calc(100vw-2rem)]">
+      <div className="fixed bottom-0 right-4 z-30 w-96 max-w-[calc(100vw-2rem)]">
         <div className="bg-slate-900 border border-slate-700 rounded-t-xl shadow-2xl overflow-hidden">
           <button
             onClick={() => setShowLogs(!showLogs)}
