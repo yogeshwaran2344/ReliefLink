@@ -149,10 +149,50 @@ function MainContent() {
   );
 }
 
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+  componentDidCatch(error, errorInfo) {
+    console.error('ReliefLink Runtime Caught Error:', error, errorInfo);
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="p-8 m-6 bg-slate-900 border border-rose-500/50 rounded-2xl text-center space-y-4 shadow-2xl">
+          <div className="inline-flex p-3 rounded-full bg-rose-500/20 text-rose-400">
+            <Shield className="w-8 h-8" />
+          </div>
+          <h2 className="text-xl font-bold text-white">Operational Module Recovered</h2>
+          <p className="text-xs text-slate-400 max-w-lg mx-auto font-mono">
+            {this.state.error?.message || 'Component initialization error'}
+          </p>
+          <button
+            onClick={() => {
+              this.setState({ hasError: false, error: null });
+              window.location.reload();
+            }}
+            className="px-5 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-xl text-xs font-bold transition shadow-lg shadow-rose-600/30"
+          >
+            Reload Module View
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 export default function App() {
   return (
-    <ReliefProvider>
-      <MainContent />
-    </ReliefProvider>
+    <ErrorBoundary>
+      <ReliefProvider>
+        <MainContent />
+      </ReliefProvider>
+    </ErrorBoundary>
   );
 }

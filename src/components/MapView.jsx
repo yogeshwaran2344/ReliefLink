@@ -45,6 +45,23 @@ export default function MapView({ height = '560px' }) {
     setLayers(prev => ({ ...prev, [layerKey]: !prev[layerKey] }));
   };
 
+  // Safe coordinate parser
+  const getCoords = (item, fallback = [19.11, 72.89]) => {
+    if (!item) return fallback;
+    if (Array.isArray(item.coordinates) && item.coordinates[0] !== undefined) return item.coordinates;
+    if (Array.isArray(item.currentPosition) && item.currentPosition[0] !== undefined) return item.currentPosition;
+    if (item.lat !== undefined && item.lng !== undefined) return [item.lat, item.lng];
+    if (item.currentLat !== undefined && item.currentLng !== undefined) return [item.currentLat, item.currentLng];
+    return fallback;
+  };
+
+  // Safe stock parser
+  const getDepotStock = (wh) => ({
+    food: wh?.stock?.food?.available ?? wh?.inventory?.food ?? 750,
+    water: wh?.stock?.water?.available ?? wh?.inventory?.water ?? 1050,
+    medical: wh?.stock?.medical?.available ?? wh?.inventory?.medical ?? 180
+  });
+
   // Helper to create custom SVG icon markers
   const createCustomIcon = (type, label, color, status = '', extra = '') => {
     let svgIcon = '';
@@ -140,7 +157,6 @@ export default function MapView({ height = '560px' }) {
 
     // 1. Disaster Severity Heatmap & Flood Risk Contours Layer
     if (layers.heatmap) {
-      // High-risk storm surge coastal zone around Camp A & E
       const surgeContour = [
         [19.1450, 72.8250],
         [19.1300, 72.8400],
@@ -161,7 +177,6 @@ export default function MapView({ height = '560px' }) {
         dashArray: '6, 6'
       }).addTo(heatmapLayerRef.current).bindTooltip('Level-3 Coastal Surge Inundation Risk Zone', { sticky: true });
 
-      // Secondary river overflow zone
       L.circle([19.1200, 72.8450], {
         radius: 3500,
         color: '#fb7185',
@@ -172,10 +187,11 @@ export default function MapView({ height = '560px' }) {
     }
 
     // 2. Population Bubble Overlay
-    if (layers.population) {
+    if (layers.population && Array.isArray(camps)) {
       camps.forEach(camp => {
+        const coords = getCoords(camp);
         const radius = Math.max(1200, (camp.population || 500) * 2.2);
-        L.circle([camp.lat, camp.lng], {
+        L.circle(coords, {
           radius: radius,
           color: '#38bdf8',
           weight: 1,
@@ -187,14 +203,15 @@ export default function MapView({ height = '560px' }) {
     }
 
     // 3. Render Camps
-    if (layers.camps) {
+    if (layers.camps && Array.isArray(camps)) {
       camps.forEach((camp) => {
+        const coords = getCoords(camp);
         const priority = calculatePriorityScore(camp);
         const isCritical = priority.status === 'Critical';
         const color = isCritical ? '#e11d48' : priority.score >= 70 ? '#f59e0b' : '#10b981';
 
-        const marker = L.marker([camp.lat, camp.lng], {
-          icon: createCustomIcon('camp', camp.name.slice(0, 6), color, priority.status, `${priority.score} pts`)
+        const marker = L.marker(coords, {
+          icon: createCustomIcon('camp', camp.name?.slice(0, 6) || 'Camp', color, priority.status, `${priority.score} pts`)
         });
 
         marker.on('click', () => {
@@ -212,10 +229,11 @@ export default function MapView({ height = '560px' }) {
     }
 
     // 4. Render Warehouses
-    if (layers.warehouses) {
+    if (layers.warehouses && Array.isArray(warehouses)) {
       warehouses.forEach((wh) => {
-        const marker = L.marker([wh.lat, wh.lng], {
-          icon: createCustomIcon('warehouse', wh.name.replace('Warehouse ', 'Depot '), '#0284c7')
+        const coords = getCoords(wh, [19.0760, 72.8777]);
+        const marker = L.marker(coords, {
+          icon: createCustomIcon('warehouse', (wh.name || 'Depot').replace('Warehouse ', 'Depot '), '#0284c7')
         });
 
         marker.on('click', () => {
@@ -232,10 +250,11 @@ export default function MapView({ height = '560px' }) {
     }
 
     // 5. Render Vehicles
-    if (layers.vehicles) {
+    if (layers.vehicles && Array.isArray(vehicles)) {
       vehicles.forEach((veh) => {
-        const marker = L.marker([veh.currentLat, veh.currentLng], {
-          icon: createCustomIcon('vehicle', veh.name, '#6366f1')
+        const coords = getCoords(veh, [19.0800, 72.8600]);
+        const marker = L.marker(coords, {
+          icon: createCustomIcon('vehicle', veh.name || 'Fleet', '#6366f1')
         });
 
         marker.on('click', () => {
@@ -252,10 +271,11 @@ export default function MapView({ height = '560px' }) {
     }
 
     // 6. Road Hazards & Blockages
-    if (layers.hazards) {
+    if (layers.hazards && Array.isArray(blockages)) {
       blockages.forEach((b) => {
         if (!b.active) return;
-        const marker = L.marker([b.lat, b.lng], {
+        const coords = getCoords(b, [19.1000, 72.8550]);
+        const marker = L.marker(coords, {
           icon: createCustomIcon('hazard', 'Hazard', '#dc2626')
         });
 
@@ -271,15 +291,15 @@ export default function MapView({ height = '560px' }) {
     }
 
     // 7. Render Routes & Detour Paths
-    if (layers.routes) {
+    if (layers.routes && Array.isArray(warehouses) && Array.isArray(camps)) {
       const activeHazard = blockages.some(b => b.active);
 
-      // Warehouse Alpha to Camp A (Direct vs Highway 4 Detour)
-      const whA = warehouses.find(w => w.id === 'wh-1') || { lat: 19.0760, lng: 72.8777 };
-      const campA = camps.find(c => c.id === 'camp-1') || { lat: 19.1200, lng: 72.8450 };
+      const whA = warehouses[0] || { coordinates: [19.0760, 72.8777] };
+      const campA = camps[0] || { coordinates: [19.1200, 72.8450] };
+      const whACoords = getCoords(whA);
+      const campACoords = getCoords(campA);
 
       if (activeHazard) {
-        // Red blocked segment on Highway 4
         L.polyline([[19.0950, 72.8600], [19.1080, 72.8520]], {
           color: '#ef4444',
           weight: 4,
@@ -287,13 +307,12 @@ export default function MapView({ height = '560px' }) {
           opacity: 0.9
         }).addTo(routesLayerRef.current).bindTooltip('Highway 4 Submerged — Impassable', { sticky: true });
 
-        // Amber Detour Route via Eastern Bypass (+7.4 km)
         const detourCoords = [
-          [whA.lat, whA.lng],
+          whACoords,
           [19.0850, 72.8950],
           [19.1150, 72.8850],
           [19.1250, 72.8650],
-          [campA.lat, campA.lng]
+          campACoords
         ];
 
         L.polyline(detourCoords, {
@@ -302,18 +321,16 @@ export default function MapView({ height = '560px' }) {
           opacity: 0.85
         }).addTo(routesLayerRef.current).bindTooltip('Detour Active via Eastern Bypass (+7.4 km)', { sticky: true });
       } else {
-        // Normal direct route
-        L.polyline([[whA.lat, whA.lng], [campA.lat, campA.lng]], {
+        L.polyline([whACoords, campACoords], {
           color: '#10b981',
           weight: 3,
           opacity: 0.75
         }).addTo(routesLayerRef.current).bindTooltip('Nominal Route: Highway 4 Direct (8.4 km)', { sticky: true });
       }
 
-      // Warehouse Beta to Camp B & C
-      const whB = warehouses.find(w => w.id === 'wh-2') || { lat: 19.1350, lng: 72.9300 };
-      const campB = camps.find(c => c.id === 'camp-2') || { lat: 19.1650, lng: 72.9200 };
-      L.polyline([[whB.lat, whB.lng], [campB.lat, campB.lng]], {
+      const whB = warehouses[1] || { coordinates: [19.1350, 72.9300] };
+      const campB = camps[1] || { coordinates: [19.1650, 72.9200] };
+      L.polyline([getCoords(whB), getCoords(campB)], {
         color: '#6366f1',
         weight: 2.5,
         opacity: 0.65
@@ -391,7 +408,7 @@ export default function MapView({ height = '560px' }) {
                 )}
               </div>
               <span className="text-[11px] text-slate-400 font-mono">
-                Lat: {selectedEntity.data.lat || selectedEntity.data.currentLat}, Lng: {selectedEntity.data.lng || selectedEntity.data.currentLng}
+                Location: {getCoords(selectedEntity.data).join(', ')}
               </span>
             </div>
             <button
@@ -412,15 +429,15 @@ export default function MapView({ height = '560px' }) {
                 </div>
                 <div>
                   <span className="text-slate-500 block text-[10px]">Casualties:</span>
-                  <span className="font-bold text-rose-400">{selectedEntity.data.injuredCount} injured</span>
+                  <span className="font-bold text-rose-400">{selectedEntity.data.injured || selectedEntity.data.injuredCount || 0} injured</span>
                 </div>
                 <div>
                   <span className="text-slate-500 block text-[10px]">Water Deficit:</span>
-                  <span className="font-bold text-amber-400">-{selectedEntity.data.waterDemand - (selectedEntity.data.allocatedWater || 0)} L</span>
+                  <span className="font-bold text-amber-400">-{(selectedEntity.data.demands?.water || selectedEntity.data.waterDemand || 500) - (selectedEntity.data.allocated?.water || 0)} L</span>
                 </div>
                 <div>
                   <span className="text-slate-500 block text-[10px]">Food Deficit:</span>
-                  <span className="font-bold text-amber-400">-{selectedEntity.data.foodDemand - (selectedEntity.data.allocatedFood || 0)} pkts</span>
+                  <span className="font-bold text-amber-400">-{(selectedEntity.data.demands?.food || selectedEntity.data.foodDemand || 300) - (selectedEntity.data.allocated?.food || 0)} pkts</span>
                 </div>
               </div>
 
@@ -449,15 +466,15 @@ export default function MapView({ height = '560px' }) {
                 <div className="grid grid-cols-3 gap-1 text-center font-mono">
                   <div className="bg-slate-900 p-1 rounded">
                     <span className="text-slate-400 text-[9px] block">FOOD</span>
-                    <span className="font-bold text-white">{selectedEntity.data.inventory?.food}</span>
+                    <span className="font-bold text-white">{getDepotStock(selectedEntity.data).food}</span>
                   </div>
                   <div className="bg-slate-900 p-1 rounded">
                     <span className="text-slate-400 text-[9px] block">WATER</span>
-                    <span className="font-bold text-sky-400">{selectedEntity.data.inventory?.water}L</span>
+                    <span className="font-bold text-sky-400">{getDepotStock(selectedEntity.data).water}L</span>
                   </div>
                   <div className="bg-slate-900 p-1 rounded">
                     <span className="text-slate-400 text-[9px] block">MED KITS</span>
-                    <span className="font-bold text-emerald-400">{selectedEntity.data.inventory?.medical}</span>
+                    <span className="font-bold text-emerald-400">{getDepotStock(selectedEntity.data).medical}</span>
                   </div>
                 </div>
               </div>
@@ -474,11 +491,11 @@ export default function MapView({ height = '560px' }) {
           {selectedEntity.type === 'hazard' && (
             <div className="space-y-2 text-slate-300">
               <p className="text-[11px] text-rose-200 bg-rose-950/40 p-2 rounded border border-rose-500/30">
-                {selectedEntity.data.description}
+                {selectedEntity.data.description || 'Highway 4 Western Causeway submerged.'}
               </p>
               <div className="flex justify-between items-center text-[11px]">
                 <span className="text-slate-400">Detour Impact:</span>
-                <span className="text-amber-300 font-bold">+{selectedEntity.data.extraKm} km (+18 mins delay)</span>
+                <span className="text-amber-300 font-bold">+{selectedEntity.data.extraKm || 7.4} km (+18 mins delay)</span>
               </div>
             </div>
           )}
