@@ -10,6 +10,7 @@ npm run build
 
 echo "🐍 Step 3: Installing Backend Python Dependencies..."
 pip install --upgrade pip
-pip install -r backend/requirements.txt
+pip install "pydantic[email]" email-validator
+pip install -r requirements.txt
 
 echo "✅ Build completed successfully!"
