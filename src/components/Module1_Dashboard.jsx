@@ -17,7 +17,8 @@ import {
   ShieldCheck,
   Compass,
   Layers,
-  ArrowRightLeft
+  ArrowRightLeft,
+  Warehouse
 } from 'lucide-react';
 import { useRelief } from '../context/ReliefContext';
 import { calculatePriorityScore } from '../utils/aiEstimationEngine';
