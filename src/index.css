@@ -5,10 +5,42 @@
 @layer base {
   body {
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    background-color: #070a12;
+    color: #f1f5f9;
   }
   code, pre {
     font-family: 'JetBrains Mono', monospace;
   }
+}
+
+/* Ambient Command Center background textures */
+.bg-command-grid {
+  background-image: 
+    radial-gradient(ellipse 90% 60% at 50% -15%, rgba(37, 99, 235, 0.18), transparent 70%),
+    radial-gradient(circle at 10% 20%, rgba(99, 102, 241, 0.12), transparent 45%),
+    radial-gradient(circle at 90% 80%, rgba(225, 29, 72, 0.08), transparent 45%),
+    linear-gradient(to bottom, #090d16, #06080e);
+}
+
+.bg-dot-pattern {
+  background-image: radial-gradient(rgba(255, 255, 255, 0.07) 1px, transparent 1px);
+  background-size: 28px 28px;
+}
+
+/* Glassmorphic card styling */
+.glass-panel {
+  background: rgba(15, 23, 42, 0.65);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.glass-panel-glow {
+  background: rgba(15, 23, 42, 0.7);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(59, 130, 246, 0.25);
+  box-shadow: 0 10px 30px -10px rgba(37, 99, 235, 0.15);
 }
 
 /* Custom animations and styling for disaster command center */

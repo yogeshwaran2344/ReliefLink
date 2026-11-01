@@ -34,74 +34,78 @@ function MainContent() {
   const [isQROpen, setIsQROpen] = useState(false);
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-rose-500 selection:text-white">
-      <Navbar
-        onOpenSimulator={() => setIsSimulatorOpen(true)}
-        onOpenRoleModal={() => setIsRoleModalOpen(true)}
-        onOpenNotif={() => setIsNotifOpen(true)}
-        onOpenSearch={() => setIsSearchOpen(true)}
-        onOpenTwin={() => setIsTwinOpen(true)}
-        onOpenQR={() => setIsQROpen(true)}
-      />
+    <div className="min-h-screen bg-command-grid relative text-slate-100 flex flex-col font-sans selection:bg-blue-600 selection:text-white">
+      {/* Background dot matrix ambient texture */}
+      <div className="pointer-events-none fixed inset-0 bg-dot-pattern opacity-25 z-0" />
 
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        {activeTab === 'dashboard' && <Module1_Dashboard />}
-        {activeTab === 'requests' && <Module2_RequestManagement />}
-        {activeTab === 'priority' && <Module3_AIPriorityDemand />}
-        {activeTab === 'inventory' && <Module4_WarehouseInventory />}
-        {activeTab === 'allocation' && <Module5_AllocationEngine />}
-        {activeTab === 'routing' && <Module6_RouteOptimization />}
-        {activeTab === 'tracking' && <Module7_DeliveryVerification />}
-        {activeTab === 'reports' && <Module8_ReportsAnalytics />}
-        {activeTab === 'ledger' && <AccountabilityLedger />}
-      </main>
+      <div className="relative z-10 flex flex-col min-h-screen">
+        <Navbar
+          onOpenSimulator={() => setIsSimulatorOpen(true)}
+          onOpenRoleModal={() => setIsRoleModalOpen(true)}
+          onOpenNotif={() => setIsNotifOpen(true)}
+          onOpenSearch={() => setIsSearchOpen(true)}
+          onOpenTwin={() => setIsTwinOpen(true)}
+          onOpenQR={() => setIsQROpen(true)}
+        />
 
-      {/* Interactive Enterprise Modals */}
-      <DisasterScenarioSimulator
-        isOpen={isSimulatorOpen}
-        onClose={() => setIsSimulatorOpen(false)}
-      />
-      <RoleSwitcherModal
-        isOpen={isRoleModalOpen}
-        onClose={() => setIsRoleModalOpen(false)}
-      />
-      <NotificationCenter
-        isOpen={isNotifOpen}
-        onClose={() => setIsNotifOpen(false)}
-      />
-      <CommandPalette
-        isOpen={isSearchOpen}
-        onClose={() => setIsSearchOpen(false)}
-        onOpenSimulator={() => setIsSimulatorOpen(true)}
-        onOpenQR={() => setIsQROpen(true)}
-        onOpenRoleModal={() => setIsRoleModalOpen(true)}
-      />
-      <AIAssistantDrawer
-        isOpen={isAssistantOpen}
-        onClose={() => setIsAssistantOpen(false)}
-      />
-      <InnovationTwinModal
-        isOpen={isTwinOpen}
-        onClose={() => setIsTwinOpen(false)}
-      />
-      <QRVerificationModal
-        isOpen={isQROpen}
-        onClose={() => setIsQROpen(false)}
-      />
+        <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          {activeTab === 'dashboard' && <Module1_Dashboard />}
+          {activeTab === 'requests' && <Module2_RequestManagement />}
+          {activeTab === 'priority' && <Module3_AIPriorityDemand />}
+          {activeTab === 'inventory' && <Module4_WarehouseInventory />}
+          {activeTab === 'allocation' && <Module5_AllocationEngine />}
+          {activeTab === 'routing' && <Module6_RouteOptimization />}
+          {activeTab === 'tracking' && <Module7_DeliveryVerification />}
+          {activeTab === 'reports' && <Module8_ReportsAnalytics />}
+          {activeTab === 'ledger' && <AccountabilityLedger />}
+        </main>
 
-      {/* Floating System Toasts */}
-      <ToastContainer />
+        {/* Interactive Enterprise Modals */}
+        <DisasterScenarioSimulator
+          isOpen={isSimulatorOpen}
+          onClose={() => setIsSimulatorOpen(false)}
+        />
+        <RoleSwitcherModal
+          isOpen={isRoleModalOpen}
+          onClose={() => setIsRoleModalOpen(false)}
+        />
+        <NotificationCenter
+          isOpen={isNotifOpen}
+          onClose={() => setIsNotifOpen(false)}
+        />
+        <CommandPalette
+          isOpen={isSearchOpen}
+          onClose={() => setIsSearchOpen(false)}
+          onOpenSimulator={() => setIsSimulatorOpen(true)}
+          onOpenQR={() => setIsQROpen(true)}
+          onOpenRoleModal={() => setIsRoleModalOpen(true)}
+        />
+        <AIAssistantDrawer
+          isOpen={isAssistantOpen}
+          onClose={() => setIsAssistantOpen(false)}
+        />
+        <InnovationTwinModal
+          isOpen={isTwinOpen}
+          onClose={() => setIsTwinOpen(false)}
+        />
+        <QRVerificationModal
+          isOpen={isQROpen}
+          onClose={() => setIsQROpen(false)}
+        />
 
-      {/* Floating AI Disaster Operations Copilot Trigger Button */}
-      <button
-        onClick={() => setIsAssistantOpen(true)}
-        className="fixed bottom-12 right-4 z-40 px-3.5 py-2 bg-gradient-to-r from-rose-600 via-indigo-600 to-purple-600 hover:from-rose-500 hover:to-purple-500 text-white rounded-full shadow-2xl flex items-center gap-2 text-xs font-bold border border-rose-400/40 transition transform hover:scale-105 active:scale-95"
-        title="Open ReliefLink Conversational Operations Assistant"
-      >
-        <Bot className="w-4 h-4 animate-bounce" />
-        <span className="hidden sm:inline">🤖 ReliefLink Copilot</span>
-        <span className="sm:hidden">Copilot</span>
-      </button>
+        {/* Floating System Toasts */}
+        <ToastContainer />
+
+        {/* Sleek Floating AI Assistant Trigger Button */}
+        <button
+          onClick={() => setIsAssistantOpen(true)}
+          className="fixed bottom-12 right-5 z-40 px-3.5 py-2 bg-slate-900/90 hover:bg-slate-800 text-slate-200 hover:text-white rounded-full shadow-2xl flex items-center gap-2 text-xs font-semibold border border-slate-700/80 backdrop-blur-md transition-all transform hover:scale-105 active:scale-95"
+          title="Open ReliefLink Operations AI Assistant"
+        >
+          <Sparkles className="w-3.5 h-3.5 text-blue-400" />
+          <span className="hidden sm:inline">AI Operations Copilot</span>
+          <span className="sm:hidden">Copilot</span>
+        </button>
 
       {/* Floating Real-Time Operational Audit Drawer */}
       <div className="fixed bottom-0 right-4 z-30 w-96 max-w-[calc(100vw-2rem)]">
@@ -140,11 +144,12 @@ function MainContent() {
       </div>
 
       {/* Minimal Footer */}
-      <footer className="bg-slate-950 border-t border-slate-800/80 py-4 text-center text-xs text-slate-500">
+      <footer className="glass-panel border-t border-slate-800/80 py-4 text-center text-xs text-slate-500">
         <p>
-          ReliefLink: Autonomous Multi-Constraint Disaster Logistics Platform • Built for Hackathon & Presentation Defense
+          ReliefLink: Autonomous Multi-Constraint Disaster Logistics Platform
         </p>
       </footer>
+      </div>
     </div>
   );
 }
