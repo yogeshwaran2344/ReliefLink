@@ -1,10 +1,10 @@
 from typing import List, Optional, Dict, Any
 from datetime import datetime
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, Field
 
 # --- User Schemas ---
 class UserBase(BaseModel):
-    email: EmailStr
+    email: str = Field(..., description="User email address")
     full_name: str
     role: Optional[str] = "Coordinator"
 
@@ -12,7 +12,7 @@ class UserCreate(UserBase):
     password: str
 
 class UserLogin(BaseModel):
-    email: EmailStr
+    email: str
     password: str
 
 class UserResponse(UserBase):
