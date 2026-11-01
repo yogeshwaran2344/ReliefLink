@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   LayoutDashboard,
   ClipboardList,
@@ -10,12 +10,28 @@ import {
   BarChart3,
   RotateCcw,
   AlertTriangle,
-  Radio
+  Radio,
+  Sparkles,
+  Bell,
+  User,
+  ShieldAlert,
+  Coins
 } from 'lucide-react';
 import { useRelief } from '../context/ReliefContext';
 
-export default function Navbar() {
-  const { activeTab, setActiveTab, resetDemoData, blockages, toggleBlockage, backendConnected } = useRelief();
+export default function Navbar({ onOpenSimulator, onOpenRoleModal, onOpenNotif }) {
+  const {
+    activeTab,
+    setActiveTab,
+    resetDemoData,
+    blockages,
+    toggleBlockage,
+    backendConnected,
+    currentUser,
+    notifications
+  } = useRelief();
+
+  const unreadCount = notifications ? notifications.filter(n => !n.read).length : 0;
 
   const navItems = [
     { id: 'dashboard', label: '1. Command Dashboard', icon: LayoutDashboard },
@@ -26,6 +42,7 @@ export default function Navbar() {
     { id: 'routing', label: '6. Vehicle & Routing', icon: Truck },
     { id: 'tracking', label: '7. Delivery Verification', icon: ShieldCheck, badge: 'Audit' },
     { id: 'reports', label: '8. Reports & Analytics', icon: BarChart3 },
+    { id: 'ledger', label: '9. Financial & Loss Ledger', icon: Coins, badge: 'Anti-Theft' },
   ];
 
   const activeHazard = blockages.some(b => b.active);
@@ -42,7 +59,16 @@ export default function Navbar() {
           <span className="font-bold tracking-wider uppercase text-rose-300">CRISIS OPERATIONAL STATUS:</span>
           <span>Level-3 Coastal Surge & Monsoon Flood Incident Active | 5 Affected Camps | 3 Depots Online</span>
         </div>
-        <div className="flex items-center gap-3 mt-1 sm:mt-0">
+        <div className="flex items-center gap-2.5 mt-1 sm:mt-0">
+          {/* What-If Simulator Button */}
+          <button
+            onClick={onOpenSimulator}
+            className="px-2.5 py-0.5 rounded text-[11px] font-bold transition-all flex items-center gap-1.5 bg-gradient-to-r from-amber-500 to-rose-500 text-white shadow-sm hover:from-amber-400 hover:to-rose-400"
+          >
+            <Sparkles className="w-3 h-3 animate-spin" />
+            <span>⚡ What-If Simulator</span>
+          </button>
+
           <button
             onClick={() => toggleBlockage('blk-1')}
             className={`px-2.5 py-0.5 rounded text-[11px] font-semibold transition-colors flex items-center gap-1 ${
@@ -52,7 +78,7 @@ export default function Navbar() {
             }`}
           >
             <AlertTriangle className="w-3 h-3" />
-            {activeHazard ? 'Hazard Active (Highway 4 Blocked)' : 'Simulate Road Blockage'}
+            {activeHazard ? 'Hazard Active (Hwy 4 Blocked)' : 'Simulate Road Blockage'}
           </button>
 
           <button
@@ -61,7 +87,7 @@ export default function Navbar() {
             className="text-slate-400 hover:text-slate-200 text-[11px] flex items-center gap-1 bg-slate-800/80 hover:bg-slate-800 px-2 py-0.5 rounded border border-slate-700 transition"
           >
             <RotateCcw className="w-3 h-3" />
-            Reset Demo Data
+            Reset Baseline
           </button>
         </div>
       </div>
@@ -89,24 +115,55 @@ export default function Navbar() {
             </div>
           </div>
 
-          {/* Quick status summary badge */}
-          <div className="hidden lg:flex items-center gap-3 text-xs text-slate-300">
-            <div className={`px-3 py-1.5 rounded-lg flex items-center gap-2 border ${
+          {/* Right Header Action Items: Backend Status, Notification Bell, RBAC User Pill */}
+          <div className="flex items-center gap-3 text-xs text-slate-300">
+            {/* Backend Connectivity Badge */}
+            <div className={`hidden md:flex px-2.5 py-1.5 rounded-lg items-center gap-2 border text-[11px] ${
               backendConnected
                 ? 'bg-emerald-950/40 border-emerald-500/40 text-emerald-300'
                 : 'bg-amber-950/40 border-amber-500/40 text-amber-300'
             }`}>
               <span className={`w-2 h-2 rounded-full ${backendConnected ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`}></span>
-              <span>{backendConnected ? 'Database Synced (FastAPI :8000)' : 'Standalone Local DB'}</span>
+              <span>{backendConnected ? 'Backend Connected (:8000)' : 'Local Engine Ready'}</span>
             </div>
-            <div className="bg-slate-800/80 border border-slate-700 px-3 py-1.5 rounded-lg flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
-              <span>OR-Tools Routing: <b>Online</b></span>
-            </div>
+
+            {/* In-App Notifications Bell */}
+            <button
+              onClick={onOpenNotif}
+              className="relative p-2 rounded-lg bg-slate-800/80 hover:bg-slate-800 border border-slate-700 text-slate-300 hover:text-white transition"
+              title="Notifications & Smart Alerts"
+            >
+              <Bell className="w-4 h-4" />
+              {unreadCount > 0 && (
+                <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-rose-500 text-white font-bold text-[9px] flex items-center justify-center animate-bounce">
+                  {unreadCount}
+                </span>
+              )}
+            </button>
+
+            {/* RBAC Role Switcher Pill */}
+            <button
+              onClick={onOpenRoleModal}
+              className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-750 border border-slate-700 text-left transition group"
+              title="Switch RBAC Role (Admin, Coordinator, Warehouse Manager, etc.)"
+            >
+              <div className="w-6 h-6 rounded-md bg-indigo-500/20 text-indigo-400 flex items-center justify-center font-bold text-xs border border-indigo-500/30">
+                {currentUser?.role?.charAt(0) || 'U'}
+              </div>
+              <div className="hidden sm:block">
+                <div className="text-[11px] font-semibold text-slate-200 group-hover:text-rose-400 leading-tight">
+                  {currentUser?.name || 'Authorized User'}
+                </div>
+                <div className="text-[9px] text-slate-400 flex items-center gap-1 font-mono uppercase tracking-wider">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                  {currentUser?.role || 'Coordinator'}
+                </div>
+              </div>
+            </button>
           </div>
         </div>
 
-        {/* 8 Module Navigation Tabs */}
+        {/* 9 Module Navigation Tabs */}
         <nav className="flex space-x-1 overflow-x-auto pb-2 scrollbar-none border-t border-slate-800/80 pt-2">
           {navItems.map((item) => {
             const Icon = item.icon;
@@ -115,13 +172,13 @@ export default function Navbar() {
               <button
                 key={item.id}
                 onClick={() => setActiveTab(item.id)}
-                className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold whitespace-nowrap transition-all duration-150 ${
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold whitespace-nowrap transition-all duration-150 ${
                   isActive
                     ? 'bg-rose-500 text-white shadow-lg shadow-rose-500/25 ring-1 ring-rose-400'
                     : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
                 }`}
               >
-                <Icon className={`w-4 h-4 ${isActive ? 'text-white' : 'text-slate-400'}`} />
+                <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-white' : 'text-slate-400'}`} />
                 <span>{item.label}</span>
                 {item.badge && (
                   <span

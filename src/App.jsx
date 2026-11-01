@@ -9,15 +9,29 @@ import Module5_AllocationEngine from './components/Module5_AllocationEngine';
 import Module6_RouteOptimization from './components/Module6_RouteOptimization';
 import Module7_DeliveryVerification from './components/Module7_DeliveryVerification';
 import Module8_ReportsAnalytics from './components/Module8_ReportsAnalytics';
+import AccountabilityLedger from './components/AccountabilityLedger';
+import ToastContainer from './components/ToastContainer';
+import DisasterScenarioSimulator from './components/DisasterScenarioSimulator';
+import RoleSwitcherModal from './components/RoleSwitcherModal';
+import NotificationCenter from './components/NotificationCenter';
 import { Terminal, Shield, ChevronUp, ChevronDown } from 'lucide-react';
 
 function MainContent() {
   const { activeTab, auditLogs } = useRelief();
   const [showLogs, setShowLogs] = useState(false);
 
+  // Modal Open States
+  const [isSimulatorOpen, setIsSimulatorOpen] = useState(false);
+  const [isRoleModalOpen, setIsRoleModalOpen] = useState(false);
+  const [isNotifOpen, setIsNotifOpen] = useState(false);
+
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans">
-      <Navbar />
+    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-rose-500 selection:text-white">
+      <Navbar
+        onOpenSimulator={() => setIsSimulatorOpen(true)}
+        onOpenRoleModal={() => setIsRoleModalOpen(true)}
+        onOpenNotif={() => setIsNotifOpen(true)}
+      />
 
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {activeTab === 'dashboard' && <Module1_Dashboard />}
@@ -28,7 +42,25 @@ function MainContent() {
         {activeTab === 'routing' && <Module6_RouteOptimization />}
         {activeTab === 'tracking' && <Module7_DeliveryVerification />}
         {activeTab === 'reports' && <Module8_ReportsAnalytics />}
+        {activeTab === 'ledger' && <AccountabilityLedger />}
       </main>
+
+      {/* Interactive Modals */}
+      <DisasterScenarioSimulator
+        isOpen={isSimulatorOpen}
+        onClose={() => setIsSimulatorOpen(false)}
+      />
+      <RoleSwitcherModal
+        isOpen={isRoleModalOpen}
+        onClose={() => setIsRoleModalOpen(false)}
+      />
+      <NotificationCenter
+        isOpen={isNotifOpen}
+        onClose={() => setIsNotifOpen(false)}
+      />
+
+      {/* Floating System Toasts */}
+      <ToastContainer />
 
       {/* Floating Real-Time Operational Audit Drawer */}
       <div className="fixed bottom-0 right-4 z-40 w-96 max-w-[calc(100vw-2rem)]">
@@ -53,6 +85,7 @@ function MainContent() {
                     log.category === 'SECURITY' ? 'bg-rose-500/20 text-rose-400' :
                     log.category === 'AI_ALLOCATION' ? 'bg-indigo-500/20 text-indigo-400' :
                     log.category === 'SURPLUS_TRANSFER' ? 'bg-blue-500/20 text-blue-400' :
+                    log.category === 'SIMULATION' ? 'bg-amber-500/20 text-amber-400' :
                     'bg-slate-800 text-slate-400'
                   }`}>
                     {log.category}

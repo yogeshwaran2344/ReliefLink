@@ -27,6 +27,88 @@ export function ReliefProvider({ children }) {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [allocationOutput, setAllocationOutput] = useState(null);
 
+  // User Authentication & RBAC Session State
+  const [currentUser, setCurrentUser] = useState({
+    id: 'usr-coord-01',
+    name: 'Dr. Vikram Malhotra',
+    email: 'coordinator@relieflink.org',
+    role: 'Coordinator', // 'Admin', 'Coordinator', 'Warehouse Manager', 'Field Volunteer', 'Fleet Driver'
+    title: 'Disaster Relief Coordinator'
+  });
+
+  // Toasts
+  const [toasts, setToasts] = useState([]);
+  const addToast = (type, message, title = '') => {
+    const id = `toast-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`;
+    setToasts(prev => [...prev, { id, type, message, title }]);
+    setTimeout(() => {
+      setToasts(prev => prev.filter(t => t.id !== id));
+    }, 5000);
+  };
+  const removeToast = (id) => {
+    setToasts(prev => prev.filter(t => t.id !== id));
+  };
+
+  // Smart In-App Notifications
+  const [notifications, setNotifications] = useState([
+    {
+      id: 'notif-1',
+      title: 'Critical Triage Alert: Camp A Water Shortage',
+      message: 'Camp A has exhausted safe drinking water reserves. 65 injured casualties reported.',
+      category: 'CRITICAL',
+      time: '10 mins ago',
+      read: false,
+      targetTab: 'priority'
+    },
+    {
+      id: 'notif-2',
+      title: 'Warehouse B Food Stock Depletion Alarm',
+      message: 'Warehouse B available food buffer (80 pkts) has breached safe threshold (350 pkts). Inter-depot surplus transfer recommended.',
+      category: 'INVENTORY',
+      time: '24 mins ago',
+      read: false,
+      targetTab: 'inventory'
+    },
+    {
+      id: 'notif-3',
+      title: 'Road Blockage: Highway 4 Western Bypass',
+      message: 'Arterial causeway submerged. Automated OR-Tools routing diverted convoys via Eastern Link Detour (+7.4 km).',
+      category: 'FLEET',
+      time: '45 mins ago',
+      read: false,
+      targetTab: 'routing'
+    },
+    {
+      id: 'notif-4',
+      title: 'Discrepancy Flagged: Delivery DEL-2026-001',
+      message: '10 food packets damaged by road splash; 5 medical kits short-shipped at loading bay.',
+      category: 'AUDIT',
+      time: '1 hr ago',
+      read: true,
+      targetTab: 'tracking'
+    }
+  ]);
+
+  const markNotificationRead = (id) => {
+    setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
+  };
+
+  const markAllNotificationsRead = () => {
+    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+    addToast('info', 'All operational alerts marked as read.', 'Notifications');
+  };
+
+  // Switch User Role (RBAC)
+  const switchUserRole = (roleObj) => {
+    setCurrentUser({
+      id: `usr-${roleObj.id.toLowerCase().replace(' ', '-')}`,
+      name: roleObj.name,
+      email: `${roleObj.id.toLowerCase().replace(' ', '')}@relieflink.org`,
+      role: roleObj.id,
+      title: roleObj.title
+    });
+  };
+
   const [auditLogs, setAuditLogs] = useState([
     { id: 'log-1', timestamp: new Date(Date.now() - 3600000 * 4).toLocaleTimeString(), category: 'SYSTEM', message: 'ReliefLink Core Disaster Response Engine initialized.' },
     { id: 'log-2', timestamp: new Date(Date.now() - 3600000 * 3).toLocaleTimeString(), category: 'TRIAGE', message: 'Camp A & Camp E flagged as Critical Priority due to surge flooding.' },
@@ -44,7 +126,7 @@ export function ReliefProvider({ children }) {
     setAuditLogs(prev => [newLog, ...prev.slice(0, 49)]);
   };
 
-  // 1. Initial Backend Sync on Mount
+  // Initial Backend Sync on Mount
   useEffect(() => {
     async function syncWithBackend() {
       try {
@@ -52,7 +134,6 @@ export function ReliefProvider({ children }) {
         setBackendConnected(true);
         addAuditLog('SYSTEM', 'Connected to live FastAPI backend at http://127.0.0.1:8000 (Database persistence active).');
 
-        // Fetch live camps from backend
         const backendLocations = await api.getLocations();
         if (backendLocations && backendLocations.length > 0) {
           const mappedCamps = backendLocations.map(l => ({
@@ -88,7 +169,6 @@ export function ReliefProvider({ children }) {
           setCamps(mappedCamps);
         }
 
-        // Fetch live requests
         const backendRequests = await api.getRequests();
         if (backendRequests && backendRequests.length > 0) {
           const mappedReqs = backendRequests.map(r => ({
@@ -110,50 +190,7 @@ export function ReliefProvider({ children }) {
           }));
           setRequests(mappedReqs);
         }
-
-        // Fetch live warehouses
-        const backendWarehouses = await api.getWarehouses();
-        if (backendWarehouses && backendWarehouses.length > 0) {
-          const mappedWh = backendWarehouses.map(w => {
-            const stockMap = {
-              food: { total: 1000, reserved: 200, dispatched: 100, available: 700, minThreshold: 300, unit: 'packets', unitWeightKg: 0.8, expiryDays: 20 },
-              water: { total: 1500, reserved: 300, dispatched: 150, available: 1050, minThreshold: 500, unit: 'liters', unitWeightKg: 1.0, expiryDays: 180 },
-              medical: { total: 250, reserved: 50, dispatched: 30, available: 170, minThreshold: 60, unit: 'kits', unitWeightKg: 1.5, expiryDays: 90 },
-              shelter: { total: 150, reserved: 25, dispatched: 15, available: 110, minThreshold: 40, unit: 'kits', unitWeightKg: 4.0, expiryDays: 730 }
-            };
-
-            w.inventory_items?.forEach(inv => {
-              if (stockMap[inv.category]) {
-                stockMap[inv.category] = {
-                  total: inv.total_qty,
-                  reserved: inv.reserved_qty,
-                  dispatched: inv.dispatched_qty,
-                  available: inv.available_qty,
-                  minThreshold: inv.min_threshold,
-                  unit: inv.unit,
-                  unitWeightKg: inv.unit_weight_kg,
-                  expiryDays: inv.expiry_days
-                };
-              }
-            });
-
-            return {
-              id: w.id,
-              name: w.name,
-              code: w.code,
-              coordinates: [w.latitude, w.longitude],
-              capacityKg: w.capacity_kg,
-              address: w.address,
-              stock: stockMap,
-              assignedVehicles: w.id === 'wh-alpha' ? ['veh-1'] : w.id === 'wh-beta' ? ['veh-2'] : ['veh-3'],
-              status: w.status
-            };
-          });
-          setWarehouses(mappedWh);
-        }
-
       } catch (err) {
-        console.warn('Backend offline or not reachable, using resilient local storage baseline:', err.message);
         setBackendConnected(false);
       }
     }
@@ -167,8 +204,81 @@ export function ReliefProvider({ children }) {
     setAllocationOutput(result);
   }, [camps, warehouses, vehicles]);
 
+  // Apply "What-If" Disaster Simulation Scenario
+  const applySimulationScenario = (config) => {
+    // 1. Update Camps based on severity & population scale
+    setCamps(prev => prev.map(c => {
+      const scaledPop = Math.round(c.population * config.popMultiplier);
+      const scaledInjured = config.severity === 'Extreme' ? Math.round(c.injured * 1.5) : c.injured;
+      return {
+        ...c,
+        severity: config.severity,
+        population: scaledPop,
+        injured: scaledInjured,
+        demands: {
+          food: Math.round(c.demands.food * config.popMultiplier),
+          water: Math.round(c.demands.water * config.popMultiplier),
+          medical: Math.round(c.demands.medical * (config.severity === 'Extreme' ? 1.6 : 1.2)),
+          shelter: Math.round(c.demands.shelter * config.popMultiplier)
+        }
+      };
+    }));
+
+    // 2. Road blockage
+    setBlockages(prev => prev.map(b => ({
+      ...b,
+      active: config.blockHighway
+    })));
+
+    // 3. Vehicle breakdown
+    setVehicles(prev => prev.map(v => {
+      if (v.id === config.brokenVehicleId) {
+        return { ...v, status: 'Maintenance / Breakdown', currentLoadKg: 0 };
+      }
+      return { ...v, status: 'Available' };
+    }));
+
+    // 4. Warehouse stock depletion if selected
+    if (config.depleteWarehouseWater) {
+      setWarehouses(prev => prev.map(w => {
+        if (w.id === 'wh-beta') {
+          return {
+            ...w,
+            stock: {
+              ...w.stock,
+              water: { ...w.stock.water, available: 0, total: 200 }
+            }
+          };
+        }
+        return w;
+      }));
+    }
+
+    // Add alert to notification center
+    setNotifications(prev => [
+      {
+        id: `notif-${Date.now()}`,
+        title: `Disaster Simulation Enacted: ${config.severity} Alert`,
+        message: `Ground conditions modified (Pop scale: x${config.popMultiplier}). Allocation and routing recalculated.`,
+        category: 'CRITICAL',
+        time: 'Just now',
+        read: false,
+        targetTab: 'dashboard'
+      },
+      ...prev
+    ]);
+
+    addAuditLog('SIMULATION', `What-If Disaster Scenario active: Severity=${config.severity}, PopMultiplier=x${config.popMultiplier}, Blockade=${config.blockHighway}, BrokenVehicle=${config.brokenVehicleId}`);
+  };
+
   // Register a new affected location
   const registerCamp = async (campData) => {
+    // RBAC Check
+    if (currentUser.role === 'Fleet Driver') {
+      addToast('error', 'Access Denied: Drivers do not have permission to register new camps.', 'RBAC Violation');
+      return null;
+    }
+
     const newCamp = {
       id: `camp-${Date.now().toString().slice(-6)}`,
       name: campData.name,
@@ -193,9 +303,9 @@ export function ReliefProvider({ children }) {
     };
 
     setCamps(prev => [...prev, newCamp]);
-    addAuditLog('LOCATION', `New affected location registered: ${newCamp.name} (${newCamp.population} pop, ${newCamp.disasterType})`);
+    addToast('success', `Location "${newCamp.name}" added to the operational grid.`, 'Camp Registered');
+    addAuditLog('LOCATION', `New location registered by ${currentUser.name} (${currentUser.role}): ${newCamp.name}`);
 
-    // Sync to backend if online
     if (backendConnected) {
       try {
         await api.createLocation({
@@ -306,9 +416,11 @@ export function ReliefProvider({ children }) {
         }
         return c;
       }));
-      addAuditLog('REQUEST', `Relief request ${newRequest.id} validated for ${newRequest.locationName} (${newRequest.urgency} urgency)`);
+      addToast('success', `Relief request ${newRequest.id} validated for ${newRequest.locationName}.`, 'Request Approved');
+      addAuditLog('REQUEST', `Request ${newRequest.id} filed by ${currentUser.name} (${currentUser.role}) for ${newRequest.locationName}`);
     } else {
-      addAuditLog('SECURITY', `Duplicate relief request ${newRequest.id} flagged & suppressed: ${dupCheck.reason}`);
+      addToast('warning', `Duplicate request suppressed: identical demands filed recently.`, 'Duplicate Blocked');
+      addAuditLog('SECURITY', `Duplicate relief request ${newRequest.id} suppressed: ${dupCheck.reason}`);
     }
 
     return { request: newRequest, duplicate: dupCheck };
@@ -316,13 +428,19 @@ export function ReliefProvider({ children }) {
 
   // Run AI allocation engine
   const triggerAIAllocation = async () => {
+    // RBAC Check: Only Coordinator or Admin can approve allocation
+    if (currentUser.role === 'Field Volunteer' || currentUser.role === 'Fleet Driver') {
+      addToast('error', `Access Denied: ${currentUser.role} cannot trigger or approve resource allocation. Coordinator role required.`, 'RBAC Restricted');
+      return null;
+    }
+
     let result = null;
 
     if (backendConnected) {
       try {
         const backendAllocations = await api.optimizeAllocations();
         if (backendAllocations && backendAllocations.length > 0) {
-          addAuditLog('AI_ALLOCATION', `Backend Optimization executed via FastAPI: ${backendAllocations.length} allocations computed and saved to database.`);
+          addAuditLog('AI_ALLOCATION', `Backend Optimization executed by ${currentUser.name} (${currentUser.role}). ${backendAllocations.length} records saved.`);
         }
       } catch (e) {
         console.warn('Backend allocation optimization failed:', e.message);
@@ -332,7 +450,6 @@ export function ReliefProvider({ children }) {
     result = runResourceAllocation(camps, warehouses, vehicles);
     setAllocationOutput(result);
 
-    // Update camps allocated counts
     setCamps(prev => prev.map(c => {
       const match = result.allocationPlan.find(p => p.campId === c.id);
       if (match) {
@@ -341,12 +458,19 @@ export function ReliefProvider({ children }) {
       return c;
     }));
 
-    addAuditLog('AI_ALLOCATION', `Intelligent Resource Allocation executed. ${result.totalAllocatedKg} kg relief materials optimally apportioned across 5 locations.`);
+    addToast('success', `Resource allocation optimized: ${result.totalAllocatedKg.toLocaleString()} kg apportioned across camps.`, 'AI Allocation Complete');
+    addAuditLog('AI_ALLOCATION', `Resource Allocation approved by ${currentUser.name} (${currentUser.role}). Total: ${result.totalAllocatedKg} kg.`);
     return result;
   };
 
   // Execute surplus redistribution
   const executeSurplusTransfer = async (recommendation) => {
+    // RBAC Check: Warehouse Manager or Admin
+    if (currentUser.role === 'Field Volunteer' || currentUser.role === 'Fleet Driver') {
+      addToast('error', `Access Denied: Only Warehouse Managers or Coordinators can authorize inter-depot stock transfers.`, 'Permission Denied');
+      return;
+    }
+
     if (backendConnected) {
       try {
         await api.executeSurplusTransfer({
@@ -392,7 +516,8 @@ export function ReliefProvider({ children }) {
       return wh;
     }));
 
-    addAuditLog('SURPLUS_TRANSFER', `Redistributed ${recommendation.recommendedTransferQty} ${recommendation.unit} of ${recommendation.itemDisplayName} from ${recommendation.donorName} to ${recommendation.recipientName}.`);
+    addToast('success', `Transferred ${recommendation.recommendedTransferQty} ${recommendation.unit} of ${recommendation.itemDisplayName} from ${recommendation.donorName} to ${recommendation.recipientName}.`, 'Surplus Rebalanced');
+    addAuditLog('SURPLUS_TRANSFER', `Inter-depot transfer authorized by ${currentUser.name} (${currentUser.role}): ${recommendation.recommendedTransferQty} units.`);
   };
 
   // Toggle Road Blockage Simulation
@@ -400,7 +525,8 @@ export function ReliefProvider({ children }) {
     setBlockages(prev => prev.map(b => {
       if (b.id === blockageId) {
         const nextState = !b.active;
-        addAuditLog('ROUTE_SIMULATION', `Hazard status updated for ${b.roadName}: ${nextState ? 'ROAD BLOCKED' : 'CLEARED'}. Recomputing multi-hop fleet routing.`);
+        addToast(nextState ? 'warning' : 'success', `${b.roadName} hazard status updated: ${nextState ? 'BLOCKED' : 'CLEARED'}.`, 'Routing Hazard');
+        addAuditLog('ROUTE_SIMULATION', `Hazard status updated by ${currentUser.name}: ${b.roadName} ${nextState ? 'ROAD BLOCKED' : 'CLEARED'}.`);
         return { ...b, active: nextState };
       }
       return b;
@@ -435,7 +561,7 @@ export function ReliefProvider({ children }) {
           stage: stageName,
           routeAudit: [
             ...del.routeAudit,
-            { time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), event: `Status updated to [${stageName}]` }
+            { time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), event: `Status updated to [${stageName}] by ${currentUser.name} (${currentUser.role})` }
           ]
         };
 
@@ -443,7 +569,8 @@ export function ReliefProvider({ children }) {
         else if (newStageIndex === 4) updated.arrivedTimestamp = new Date().toISOString();
         else if (newStageIndex === 6) updated.completedTimestamp = new Date().toISOString();
 
-        addAuditLog('DELIVERY', `Delivery ${del.deliveryCode} progressed to stage: ${stageName}`);
+        addToast('info', `Delivery ${del.deliveryCode} progressed to stage: ${stageName}`, 'Convoy Status');
+        addAuditLog('DELIVERY', `Delivery ${del.deliveryCode} advanced to ${stageName} by ${currentUser.name}`);
         return updated;
       }
       return del;
@@ -497,7 +624,7 @@ export function ReliefProvider({ children }) {
           routeAudit: [
             ...del.routeAudit,
             { time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), event: `Receipt verified by ${verificationData.recipientName}. Discrepancy: ${hasDiscrepancy ? `${fMissing} Food, ${wMissing} Water, ${mMissing} Med missing` : 'None (100% Intact)'}` },
-            { time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), event: 'Delivery lifecycle marked COMPLETED. Inventory ledger finalized.' }
+            { time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), event: `Lifecycle closed by ${currentUser.name} (${currentUser.role})` }
           ]
         };
 
@@ -515,7 +642,12 @@ export function ReliefProvider({ children }) {
           return c;
         }));
 
-        addAuditLog('VERIFICATION', `Delivery ${del.deliveryCode} receipt verified. ${hasDiscrepancy ? `WARNING: Missing items detected!` : 'Perfect delivery without loss.'}`);
+        addToast(
+          hasDiscrepancy ? 'warning' : 'success',
+          `Receipt verified for ${del.deliveryCode}. ${hasDiscrepancy ? `Loss flagged: ${fMissing} Food, ${mMissing} Medical missing!` : '100% Intact'}`,
+          'Ground Receipt Audit'
+        );
+        addAuditLog('VERIFICATION', `Delivery ${del.deliveryCode} verified by ${verificationData.recipientName}. Auditor: ${currentUser.name}`);
         return updated;
       }
       return del;
@@ -531,7 +663,7 @@ export function ReliefProvider({ children }) {
     setBlockages(ROAD_BLOCKAGES);
     const alloc = runResourceAllocation(INITIAL_LOCATIONS, INITIAL_WAREHOUSES, INITIAL_VEHICLES);
     setAllocationOutput(alloc);
-    addAuditLog('SYSTEM', 'System reset to presentation baseline (5 Camps, 3 Warehouses, 3 Vehicles).');
+    addAuditLog('SYSTEM', `System reset by ${currentUser.name} (${currentUser.role}) to 5 Camps / 3 Warehouses / 3 Vehicles.`);
   };
 
   return (
@@ -546,6 +678,15 @@ export function ReliefProvider({ children }) {
       activeTab,
       setActiveTab,
       backendConnected,
+      currentUser,
+      switchUserRole,
+      notifications,
+      markNotificationRead,
+      markAllNotificationsRead,
+      toasts,
+      addToast,
+      removeToast,
+      applySimulationScenario,
       allocationOutput,
       registerCamp,
       submitRequest,
