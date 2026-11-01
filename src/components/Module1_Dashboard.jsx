@@ -18,7 +18,20 @@ import { calculatePriorityScore } from '../utils/aiEstimationEngine';
 import MapView from './MapView';
 
 export default function Module1_Dashboard() {
-  const { camps, warehouses, vehicles, requests, deliveries, setActiveTab, triggerAIAllocation } = useRelief();
+  const {
+    camps,
+    warehouses,
+    vehicles,
+    requests,
+    deliveries,
+    userLocation,
+    locationLoading,
+    detectUserLocation,
+    setupAroundCurrentLocation,
+    clearAllData,
+    setActiveTab,
+    triggerAIAllocation
+  } = useRelief();
 
   // Metrics calculations
   const totalLocations = camps.length;
@@ -29,30 +42,81 @@ export default function Module1_Dashboard() {
     priority: calculatePriorityScore(c)
   }));
 
-  const criticalLocations = campPriorities.filter(c => c.priority.status === 'Critical').length;
+  const criticalLocations = campPriorities.filter(c => c.priority?.status === 'Critical').length;
 
-  // Available stock across all 3 warehouses
+  // Available stock across all warehouses
   const totalAvailableStockUnits = warehouses.reduce((acc, wh) => {
-    return acc + (wh.stock.food.available || 0) + (wh.stock.water.available || 0) + (wh.stock.medical.available || 0);
+    return acc + (wh.stock?.food?.available || 0) + (wh.stock?.water?.available || 0) + (wh.stock?.medical?.available || 0);
   }, 0);
 
   const availableVehiclesCount = vehicles.filter(v => v.status === 'Available').length;
 
   // Dispatched units from warehouses
   const totalDispatchedUnits = warehouses.reduce((acc, wh) => {
-    return acc + (wh.stock.food.dispatched || 0) + (wh.stock.water.dispatched || 0) + (wh.stock.medical.dispatched || 0);
+    return acc + (wh.stock?.food?.dispatched || 0) + (wh.stock?.water?.dispatched || 0) + (wh.stock?.medical?.dispatched || 0);
   }, 0);
 
   const deliveriesCompleted = deliveries.filter(d => d.stage === 'Completed').length;
   const pendingDeliveries = deliveries.filter(d => d.stage !== 'Completed').length;
 
   // Overall shortage percentage calculation
-  const totalDemanded = camps.reduce((acc, c) => acc + c.demands.food + c.demands.water + c.demands.medical, 0);
+  const totalDemanded = camps.reduce((acc, c) => acc + (c.demands?.food || 0) + (c.demands?.water || 0) + (c.demands?.medical || 0), 0);
   const totalReceived = camps.reduce((acc, c) => acc + (c.received?.food || 0) + (c.received?.water || 0) + (c.received?.medical || 0), 0);
   const overallShortagePercent = totalDemanded > 0 ? Math.round(((totalDemanded - totalReceived) / totalDemanded) * 100) : 0;
 
   return (
     <div className="space-y-6">
+      {/* Real GPS Telemetry & Action Banner */}
+      <div className="p-4 rounded-2xl bg-gradient-to-r from-blue-950/80 via-slate-900 to-indigo-950/80 border border-blue-500/40 shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-blue-500/20 text-blue-400 border border-blue-500/40 flex items-center justify-center shrink-0">
+            <MapPin className="w-5 h-5 animate-pulse" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded bg-blue-500/20 text-blue-300 border border-blue-500/30">
+                Live Geolocation Anchor
+              </span>
+              <span className="text-xs text-slate-400">
+                {userLocation ? `Locked: ${userLocation.lat}, ${userLocation.lng} (±${userLocation.accuracy}m)` : (locationLoading ? 'Detecting browser GPS...' : 'GPS telemetry standby')}
+              </span>
+            </div>
+            <div className="text-sm font-semibold text-white mt-0.5">
+              {totalLocations === 0
+                ? 'Clean Slate: Zero demo records present. Ready for live operations.'
+                : `Active Sector: ${totalLocations} Camps & ${warehouses.length} Depots centered around user coordinates.`}
+            </div>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          {totalLocations === 0 ? (
+            <button
+              onClick={() => setupAroundCurrentLocation(userLocation?.lat, userLocation?.lng)}
+              className="flex items-center gap-1.5 px-3.5 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-xl text-xs font-bold shadow-lg shadow-blue-600/30 transition transform active:scale-95"
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>⚡ Setup at My GPS</span>
+            </button>
+          ) : (
+            <button
+              onClick={clearAllData}
+              className="flex items-center gap-1.5 px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-xl text-xs font-medium border border-slate-700 transition"
+              title="Wipe to clean state (0 records)"
+            >
+              <span>🗑️ Wipe to 0 (Clean Slate)</span>
+            </button>
+          )}
+
+          <button
+            onClick={() => setActiveTab('requests')}
+            className="flex items-center gap-1.5 px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-semibold border border-slate-700 transition"
+          >
+            <span>➕ New Camp</span>
+          </button>
+        </div>
+      </div>
+
       {/* Welcome & Live Situational Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 p-6 rounded-2xl border border-slate-700/80 shadow-xl">
         <div>
@@ -66,7 +130,7 @@ export default function Module1_Dashboard() {
             Disaster Command Dashboard
           </h1>
           <p className="text-sm text-slate-300 mt-1 max-w-2xl">
-            Live telemetry, situational awareness, and automated logistics orchestration across 5 affected camps, 3 strategic warehouses, and autonomous fleet routes.
+            Live telemetry, situational awareness, and automated logistics orchestration across {totalLocations} affected camps, {warehouses.length} strategic warehouses, and autonomous fleet routes.
           </p>
         </div>
 

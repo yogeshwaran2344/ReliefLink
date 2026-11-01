@@ -31,9 +31,16 @@ export default function Navbar({
   onOpenQR
 }) {
   const {
+    camps,
+    warehouses,
     activeTab,
     setActiveTab,
     resetDemoData,
+    setupAroundCurrentLocation,
+    clearAllData,
+    userLocation,
+    locationLoading,
+    detectUserLocation,
     blockages,
     toggleBlockage,
     backendConnected,
@@ -66,17 +73,39 @@ export default function Navbar({
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
             <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-rose-500"></span>
           </span>
-          <span className="font-bold tracking-wider uppercase text-rose-300">CRISIS OPERATIONAL STATUS:</span>
-          <span>Level-3 Coastal Surge & Monsoon Flood Incident Active | 5 Affected Camps | 3 Depots Online</span>
+          <span className="font-bold tracking-wider uppercase text-rose-300">
+            {camps.length === 0 ? 'CLEAN SLATE ACTIVE:' : 'CRISIS OPERATIONAL STATUS:'}
+          </span>
+          <span>
+            {camps.length === 0
+              ? 'Zero Demo Records • Ready for real GPS deployment'
+              : `Active Sector: ${camps.length} Camps | ${warehouses.length} Depots Online`}
+          </span>
         </div>
         <div className="flex items-center gap-2 mt-1 sm:mt-0">
+          {/* Real GPS Indicator Badge */}
+          <button
+            onClick={detectUserLocation}
+            className="px-2 py-0.5 rounded text-[11px] font-mono font-semibold flex items-center gap-1.5 bg-blue-950/80 border border-blue-500/50 text-blue-300 hover:text-white transition"
+            title="Click to refresh browser GPS"
+          >
+            <span className={`w-2 h-2 rounded-full ${userLocation ? 'bg-emerald-400 animate-pulse' : 'bg-blue-400'}`}></span>
+            <span>
+              {userLocation
+                ? `📍 ${userLocation.lat}, ${userLocation.lng}`
+                : locationLoading
+                ? '📍 Acquiring GPS...'
+                : '📍 Click to Lock GPS'}
+            </span>
+          </button>
+
           {/* Innovations & Digital Twin Button */}
           <button
             onClick={onOpenTwin}
             className="px-2.5 py-0.5 rounded text-[11px] font-bold transition-all flex items-center gap-1.5 bg-purple-600/80 hover:bg-purple-600 text-purple-100 border border-purple-400/40 shadow-sm"
           >
             <Activity className="w-3 h-3 text-purple-200" />
-            <span>⚡ Digital Twin & Predictor</span>
+            <span>⚡ Digital Twin</span>
           </button>
 
           {/* What-If Simulator Button */}
@@ -85,29 +114,29 @@ export default function Navbar({
             className="px-2.5 py-0.5 rounded text-[11px] font-bold transition-all flex items-center gap-1.5 bg-gradient-to-r from-amber-500 to-rose-500 text-white shadow-sm hover:from-amber-400 hover:to-rose-400"
           >
             <Sparkles className="w-3 h-3 animate-spin" />
-            <span>⚡ What-If Simulator</span>
+            <span>⚡ Simulator</span>
           </button>
 
-          <button
-            onClick={() => toggleBlockage('blk-1')}
-            className={`px-2.5 py-0.5 rounded text-[11px] font-semibold transition-colors flex items-center gap-1 ${
-              activeHazard
-                ? 'bg-amber-500/20 text-amber-300 border border-amber-500/50 hover:bg-amber-500/30'
-                : 'bg-slate-800 text-slate-400 border border-slate-700 hover:text-white'
-            }`}
-          >
-            <AlertTriangle className="w-3 h-3" />
-            {activeHazard ? 'Hazard Active (Hwy 4 Blocked)' : 'Simulate Road Blockage'}
-          </button>
-
-          <button
-            onClick={resetDemoData}
-            title="Reset system to default 5 Camps / 3 Warehouses / 3 Vehicles"
-            className="text-slate-400 hover:text-slate-200 text-[11px] flex items-center gap-1 bg-slate-800/80 hover:bg-slate-800 px-2 py-0.5 rounded border border-slate-700 transition"
-          >
-            <RotateCcw className="w-3 h-3" />
-            Reset Baseline
-          </button>
+          {/* Cluster Setup or Wipe Button */}
+          {camps.length === 0 ? (
+            <button
+              onClick={() => setupAroundCurrentLocation(userLocation?.lat, userLocation?.lng)}
+              className="px-2.5 py-0.5 rounded text-[11px] font-bold flex items-center gap-1 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white shadow-sm transition"
+              title="Initialize 3 Camps & 2 Depots centered at your GPS"
+            >
+              <Sparkles className="w-3 h-3" />
+              <span>Setup at My GPS</span>
+            </button>
+          ) : (
+            <button
+              onClick={clearAllData}
+              title="Reset system to zero records (Clean Slate)"
+              className="text-slate-400 hover:text-white text-[11px] flex items-center gap-1 bg-slate-800/80 hover:bg-slate-800 px-2 py-0.5 rounded border border-slate-700 transition"
+            >
+              <RotateCcw className="w-3 h-3" />
+              <span>Wipe to 0</span>
+            </button>
+          )}
         </div>
       </div>
 

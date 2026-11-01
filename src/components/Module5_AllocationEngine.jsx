@@ -262,51 +262,60 @@ export default function Module5_AllocationEngine() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800">
-              {plan.map((item, idx) => (
-                <tr key={item.campId} className="hover:bg-slate-800/40 transition">
-                  <td className="px-4 py-3.5">
-                    <div className="font-bold text-white">{item.campName}</div>
-                    <div className="text-[11px] text-slate-400 font-mono">ID: {item.campId}</div>
-                  </td>
-                  <td className="px-4 py-3.5">
-                    <span className={`px-2 py-0.5 rounded text-[11px] font-bold ${
-                      item.priorityStatus === 'Critical'
-                        ? 'bg-rose-500/20 text-rose-400 border border-rose-500/40'
-                        : item.priorityStatus === 'High'
-                        ? 'bg-amber-500/20 text-amber-400 border border-amber-500/40'
-                        : 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40'
-                    }`}>
-                      {item.priorityScore}/100 {item.priorityStatus}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3.5 text-center font-mono font-bold text-slate-200">
-                    {item.allocatedFood} pkts
-                  </td>
-                  <td className="px-4 py-3.5 text-center font-mono font-bold text-sky-400">
-                    {item.allocatedWater} L
-                  </td>
-                  <td className="px-4 py-3.5 text-center font-mono font-bold text-emerald-400">
-                    {item.allocatedMedical} kits
-                  </td>
-                  <td className="px-4 py-3.5">
-                    <span className="px-2 py-1 rounded bg-slate-800 text-slate-300 font-medium text-[11px]">
-                      🏢 {item.warehouseName}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3.5 font-mono text-slate-300 font-semibold">
-                    {item.allocatedWeightKg} kg
-                  </td>
-                  <td className="px-4 py-3.5 text-right font-mono">
-                    {item.remainingShortage.food === 0 && item.remainingShortage.water === 0 ? (
-                      <span className="text-emerald-400 font-bold">0 (Fulfilled)</span>
-                    ) : (
-                      <span className="text-amber-400 font-bold">
-                        -{item.remainingShortage.food}F / -{item.remainingShortage.water}W
-                      </span>
-                    )}
+              {plan.length === 0 ? (
+                <tr>
+                  <td colSpan="8" className="px-4 py-8 text-center text-slate-400">
+                    <p className="font-semibold text-white">No active allocations to compute (Clean Slate).</p>
+                    <p className="text-xs text-slate-500 mt-1">Register camps or initialize a disaster grid around your GPS to run multi-depot optimization.</p>
                   </td>
                 </tr>
-              ))}
+              ) : (
+                plan.map((item, idx) => (
+                  <tr key={item.campId} className="hover:bg-slate-800/40 transition">
+                    <td className="px-4 py-3.5">
+                      <div className="font-bold text-white">{item.campName}</div>
+                      <div className="text-[11px] text-slate-400 font-mono">ID: {item.campId}</div>
+                    </td>
+                    <td className="px-4 py-3.5">
+                      <span className={`px-2 py-0.5 rounded text-[11px] font-bold ${
+                        item.priorityStatus === 'Critical'
+                          ? 'bg-rose-500/20 text-rose-400 border border-rose-500/40'
+                          : item.priorityStatus === 'High'
+                          ? 'bg-amber-500/20 text-amber-400 border border-amber-500/40'
+                          : 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40'
+                      }`}>
+                        {item.priorityScore}/100 {item.priorityStatus}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3.5 text-center font-mono font-bold text-slate-200">
+                      {item.allocatedFood} pkts
+                    </td>
+                    <td className="px-4 py-3.5 text-center font-mono font-bold text-sky-400">
+                      {item.allocatedWater} L
+                    </td>
+                    <td className="px-4 py-3.5 text-center font-mono font-bold text-emerald-400">
+                      {item.allocatedMedical} kits
+                    </td>
+                    <td className="px-4 py-3.5">
+                      <span className="px-2 py-1 rounded bg-slate-800 text-slate-300 font-medium text-[11px]">
+                        🏢 {item.warehouseName}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3.5 font-mono text-slate-300 font-semibold">
+                      {item.allocatedWeightKg} kg
+                    </td>
+                    <td className="px-4 py-3.5 text-right font-mono">
+                      {item.remainingShortage.food === 0 && item.remainingShortage.water === 0 ? (
+                        <span className="text-emerald-400 font-bold">0 (Fulfilled)</span>
+                      ) : (
+                        <span className="text-amber-400 font-bold">
+                          -{item.remainingShortage.food}F / -{item.remainingShortage.water}W
+                        </span>
+                      )}
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>

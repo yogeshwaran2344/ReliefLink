@@ -3,7 +3,10 @@
 
 import { calculatePriorityScore } from './aiEstimationEngine';
 
-export function runResourceAllocation(camps, warehouses, vehicles) {
+export function runResourceAllocation(camps = [], warehouses = [], vehicles = []) {
+  if (!Array.isArray(camps) || camps.length === 0 || !Array.isArray(warehouses) || warehouses.length === 0) {
+    return { allocationPlan: [], allocationExplanations: [], totalAllocatedKg: 0 };
+  }
   // Deep clone warehouses stock to simulate allocation deductions
   const simWarehouses = warehouses.map(w => ({
     ...w,
@@ -105,6 +108,7 @@ export function runResourceAllocation(camps, warehouses, vehicles) {
     allocationPlan.push({
       campId: camp.id,
       campName: camp.name,
+      coordinates: camp.coordinates,
       priorityScore: camp.priority.score,
       priorityStatus: camp.priority.status,
       demands: { food: foodNeeded, water: waterNeeded, medical: medicalNeeded },

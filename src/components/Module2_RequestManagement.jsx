@@ -18,7 +18,7 @@ import {
 import { useRelief } from '../context/ReliefContext';
 
 export default function Module2_RequestManagement() {
-  const { camps, requests, registerCamp, submitRequest } = useRelief();
+  const { camps, requests, registerCamp, submitRequest, userLocation, detectUserLocation } = useRelief();
 
   const [activeView, setActiveView] = useState('list'); // 'list', 'newRequest', 'newCamp'
   const [searchQuery, setSearchQuery] = useState('');
@@ -28,7 +28,7 @@ export default function Module2_RequestManagement() {
 
   // New Request Form State
   const [requestForm, setRequestForm] = useState({
-    locationId: camps[0]?.id || 'camp-a',
+    locationId: camps[0]?.id || '',
     requesterName: '',
     requesterRole: 'Camp Coordinator',
     phone: '',
@@ -42,8 +42,8 @@ export default function Module2_RequestManagement() {
   // New Camp Form State
   const [campForm, setCampForm] = useState({
     name: '',
-    lat: '19.1500',
-    lng: '72.8800',
+    lat: userLocation?.lat ? String(userLocation.lat) : '',
+    lng: userLocation?.lng ? String(userLocation.lng) : '',
     population: 400,
     injured: 15,
     disasterType: 'Flood',
@@ -54,6 +54,18 @@ export default function Module2_RequestManagement() {
     notes: '',
     demands: { food: 200, water: 400, medical: 50, shelter: 30 }
   });
+
+  const handleUseCurrentGPS = () => {
+    if (userLocation?.lat && userLocation?.lng) {
+      setCampForm(prev => ({
+        ...prev,
+        lat: String(userLocation.lat),
+        lng: String(userLocation.lng)
+      }));
+    } else {
+      detectUserLocation();
+    }
+  };
 
   const handleRequestSubmit = (e) => {
     e.preventDefault();
@@ -212,13 +224,23 @@ export default function Module2_RequestManagement() {
             </div>
 
             <div className="space-y-1">
-              <label className="font-semibold text-slate-300">Latitude (GPS) *</label>
+              <div className="flex items-center justify-between">
+                <label className="font-semibold text-slate-300">Latitude (GPS) *</label>
+                <button
+                  type="button"
+                  onClick={handleUseCurrentGPS}
+                  className="text-[11px] text-blue-400 hover:text-blue-300 font-semibold flex items-center gap-1"
+                >
+                  <MapPin className="w-3 h-3" />
+                  <span>Use My Current GPS</span>
+                </button>
+              </div>
               <input
                 type="text"
                 required
                 value={campForm.lat}
                 onChange={e => setCampForm({ ...campForm, lat: e.target.value })}
-                placeholder="19.1234"
+                placeholder="e.g. 13.0827"
                 className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white font-mono"
               />
             </div>
@@ -230,7 +252,7 @@ export default function Module2_RequestManagement() {
                 required
                 value={campForm.lng}
                 onChange={e => setCampForm({ ...campForm, lng: e.target.value })}
-                placeholder="72.8567"
+                placeholder="e.g. 80.2707"
                 className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white font-mono"
               />
             </div>

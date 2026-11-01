@@ -294,10 +294,10 @@ export default function DisasterScenarioSimulator({ isOpen, onClose }) {
                   onChange={(e) => setOfflineWarehouse(e.target.value)}
                   className="w-full bg-slate-900 border border-slate-700 text-slate-200 rounded-lg p-2 text-xs focus:outline-none"
                 >
-                  <option value="none">All Warehouses Fully Operational</option>
-                  <option value="wh-1">Warehouse Alpha Offline (Submerged Depot)</option>
-                  <option value="wh-2">Warehouse Beta Offline (Power Grid Failure)</option>
-                  <option value="wh-3">Warehouse Gamma Offline (Access Road Blocked)</option>
+                  <option value="none">{warehouses.length === 0 ? 'No Warehouses Registered' : 'All Warehouses Fully Operational'}</option>
+                  {warehouses.map(w => (
+                    <option key={w.id} value={w.id}>{w.name} Offline (Depot Flooding)</option>
+                  ))}
                 </select>
               </div>
 
@@ -309,10 +309,10 @@ export default function DisasterScenarioSimulator({ isOpen, onClose }) {
                   onChange={(e) => setBrokenVehicleId(e.target.value)}
                   className="w-full bg-slate-900 border border-slate-700 text-slate-200 rounded-lg p-2 text-xs focus:outline-none"
                 >
-                  <option value="none">All 3 Fleet Vehicles Operational</option>
-                  <option value="veh-1">RL-01 Heavy Truck Breakdown (Axle Failure)</option>
-                  <option value="veh-2">RL-02 Medium Carrier Out of Service</option>
-                  <option value="veh-3">RL-03 High-Clearance Van Stalled</option>
+                  <option value="none">{vehicles.length === 0 ? 'No Vehicles Registered' : 'All Fleet Vehicles Operational'}</option>
+                  {vehicles.map(v => (
+                    <option key={v.id} value={v.id}>{v.name} Stalled / Breakdown</option>
+                  ))}
                 </select>
               </div>
             </div>

@@ -114,7 +114,14 @@ export default function Module7_DeliveryVerification() {
 
       {/* Active Deliveries List */}
       <div className="space-y-4">
-        {deliveries.map(del => {
+        {deliveries.length === 0 ? (
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-8 text-center space-y-3">
+            <PackageCheck className="w-8 h-8 text-emerald-400 mx-auto animate-pulse" />
+            <h3 className="text-base font-bold text-white">No Deliveries in Pipeline (Clean Slate)</h3>
+            <p className="text-xs text-slate-400">Deliveries are created when an allocation is approved or when you setup an operational grid around your GPS location.</p>
+          </div>
+        ) : (
+          deliveries.map(del => {
           const isDone = del.stage === 'Completed';
           const hasDiscrepancy = del.discrepancy && (del.discrepancy.foodMissing > 0 || del.discrepancy.waterMissing > 0 || del.discrepancy.medicalMissing > 0);
 
@@ -261,7 +268,8 @@ export default function Module7_DeliveryVerification() {
               </div>
             </div>
           );
-        })}
+        })
+        )}
       </div>
 
       {/* Verification Audit Modal Form */}

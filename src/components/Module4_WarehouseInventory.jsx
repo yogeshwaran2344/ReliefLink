@@ -18,15 +18,39 @@ import { useRelief } from '../context/ReliefContext';
 import { computeSurplusRedistribution } from '../utils/redistributionEngine';
 
 export default function Module4_WarehouseInventory() {
-  const { warehouses, camps, executeSurplusTransfer, triggerEventCascade } = useRelief();
+  const { warehouses, camps, executeSurplusTransfer, triggerEventCascade, setupAroundCurrentLocation, userLocation } = useRelief();
 
-  const [selectedWarehouseId, setSelectedWarehouseId] = useState(warehouses[0]?.id || 'wh-alpha');
+  const [selectedWarehouseId, setSelectedWarehouseId] = useState(warehouses[0]?.id || null);
   const [transferSuccessMessage, setTransferSuccessMessage] = useState(null);
 
   // Compute live surplus redistribution recommendations
   const surplusRecommendations = computeSurplusRedistribution(warehouses, camps);
 
-  const selectedWarehouse = warehouses.find(w => w.id === selectedWarehouseId) || warehouses[0];
+  const selectedWarehouse = warehouses.find(w => w.id === selectedWarehouseId) || warehouses[0] || null;
+
+  if (warehouses.length === 0) {
+    return (
+      <div className="space-y-6">
+        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-8 text-center space-y-4 shadow-xl">
+          <div className="w-16 h-16 rounded-2xl bg-blue-500/20 text-blue-400 flex items-center justify-center mx-auto border border-blue-500/30">
+            <Warehouse className="w-8 h-8 animate-pulse" />
+          </div>
+          <h2 className="text-xl font-bold text-white">No Warehouses Registered Yet (Clean Slate)</h2>
+          <p className="text-sm text-slate-300 max-w-lg mx-auto">
+            Warehouse inventory telemetry and autonomous surplus balancing will activate as soon as strategic regional depots are provisioned.
+          </p>
+          <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
+            <button
+              onClick={() => setupAroundCurrentLocation(userLocation?.lat, userLocation?.lng)}
+              className="px-5 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-xl text-xs font-bold shadow-lg transition"
+            >
+              <span>⚡ Setup 2 Depots Around My GPS</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const handleExecuteTransfer = (rec) => {
     executeSurplusTransfer(rec);

@@ -100,11 +100,18 @@ export default function Module6_RouteOptimization() {
       )}
 
       {/* Fleet Vehicles Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {optimizedFleet.map(veh => {
-          const originWarehouse = warehouses.find(w => w.id === veh.currentWarehouseId) || warehouses[0];
-          const loadPercent = Math.round((veh.currentLoadKg / veh.maxCapacityKg) * 100);
-          const isOverloaded = veh.currentLoadKg > veh.maxCapacityKg;
+      {optimizedFleet.length === 0 ? (
+        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-8 text-center space-y-3">
+          <Truck className="w-8 h-8 text-purple-400 mx-auto animate-pulse" />
+          <h3 className="text-base font-bold text-white">No Vehicles Assigned (Clean Slate)</h3>
+          <p className="text-xs text-slate-400">Initialize a cluster around your GPS to assign vehicle fleets and optimize multi-drop delivery routes.</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {optimizedFleet.map(veh => {
+            const originWarehouse = warehouses.find(w => w.id === veh.currentWarehouseId) || warehouses[0] || { name: 'Regional Central Depot' };
+            const loadPercent = Math.round((veh.currentLoadKg / veh.maxCapacityKg) * 100);
+            const isOverloaded = veh.currentLoadKg > veh.maxCapacityKg;
 
           return (
             <div key={veh.id} className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl flex flex-col justify-between space-y-4">
@@ -218,6 +225,7 @@ export default function Module6_RouteOptimization() {
           );
         })}
       </div>
+      )}
     </div>
   );
 }

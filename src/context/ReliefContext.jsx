@@ -5,7 +5,8 @@ import {
   INITIAL_VEHICLES,
   INITIAL_REQUESTS,
   INITIAL_DELIVERIES,
-  ROAD_BLOCKAGES
+  ROAD_BLOCKAGES,
+  generateBaselineAroundLocation
 } from '../data/initialData';
 import { calculatePriorityScore, checkDuplicateRequest } from '../utils/aiEstimationEngine';
 import { runResourceAllocation } from '../utils/allocationEngine';
@@ -23,6 +24,10 @@ export function ReliefProvider({ children }) {
   const [requests, setRequests] = useState(INITIAL_REQUESTS);
   const [deliveries, setDeliveries] = useState(INITIAL_DELIVERIES);
   const [blockages, setBlockages] = useState(ROAD_BLOCKAGES);
+
+  // Real-world Browser GPS User Location
+  const [userLocation, setUserLocation] = useState(null); // { lat, lng, accuracy }
+  const [locationLoading, setLocationLoading] = useState(false);
 
   const [backendConnected, setBackendConnected] = useState(false);
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -128,10 +133,7 @@ export function ReliefProvider({ children }) {
   };
 
   const [auditLogs, setAuditLogs] = useState([
-    { id: 'log-1', timestamp: new Date(Date.now() - 3600000 * 4).toLocaleTimeString(), category: 'SYSTEM', message: 'ReliefLink Core Disaster Response Engine initialized.' },
-    { id: 'log-2', timestamp: new Date(Date.now() - 3600000 * 3).toLocaleTimeString(), category: 'TRIAGE', message: 'Camp A & Camp E flagged as Critical Priority due to surge flooding.' },
-    { id: 'log-3', timestamp: new Date(Date.now() - 3600000 * 2).toLocaleTimeString(), category: 'DISPATCH', message: 'Delivery convoy DEL-2026-001 dispatched from Warehouse A to Camp A.' },
-    { id: 'log-4', timestamp: new Date(Date.now() - 3600000 * 1).toLocaleTimeString(), category: 'VERIFICATION', message: 'DEL-2026-002 receipt verified intact at Northern Ridge Shelter (Camp B).' }
+    { id: 'log-1', timestamp: new Date().toLocaleTimeString(), category: 'SYSTEM', message: 'ReliefLink Operational Disaster Logistics Engine initialized (Clean Slate Mode).' }
   ]);
 
   const addAuditLog = (category, message) => {
@@ -143,6 +145,79 @@ export function ReliefProvider({ children }) {
     };
     setAuditLogs(prev => [newLog, ...prev.slice(0, 49)]);
   };
+
+  // Real GPS Geolocation Auto-Detection
+  const detectUserLocation = () => {
+    if (typeof window === 'undefined' || !navigator?.geolocation) {
+      addToast('info', 'Geolocation not supported by this browser. Defaulting to standard regional coordinates.', 'GPS Service');
+      return;
+    }
+    setLocationLoading(true);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const { latitude, longitude, accuracy } = pos.coords;
+        const loc = {
+          lat: Number(latitude.toFixed(5)),
+          lng: Number(longitude.toFixed(5)),
+          accuracy: Math.round(accuracy)
+        };
+        setUserLocation(loc);
+        setLocationLoading(false);
+        addToast('success', `Real-world GPS locked at ${loc.lat}, ${loc.lng} (±${loc.accuracy}m)`, 'GPS Detected');
+        addAuditLog('GPS', `User GPS telemetry acquired: [${loc.lat}, ${loc.lng}] (Accuracy: ±${loc.accuracy}m)`);
+      },
+      (err) => {
+        console.warn('Geolocation lookup notice:', err.message);
+        setLocationLoading(false);
+        // Default to a sensible fallback (e.g., Chennai / South Asia region) without breaking the app
+        setUserLocation({ lat: 13.0827, lng: 80.2707, accuracy: 50, isFallback: true });
+        addToast('info', 'GPS permission prompt dismissed or unavailable. Operating with interactive map coordinates.', 'GPS Notice');
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+    );
+  };
+
+  // Setup dynamic disaster cluster around real GPS location
+  const setupAroundCurrentLocation = (customLat, customLng) => {
+    const centerLat = customLat ?? userLocation?.lat ?? 13.0827;
+    const centerLng = customLng ?? userLocation?.lng ?? 80.2707;
+
+    const cluster = generateBaselineAroundLocation(centerLat, centerLng);
+    setCamps(cluster.camps);
+    setWarehouses(cluster.warehouses);
+    setVehicles(cluster.vehicles);
+    setRequests(cluster.requests);
+    setDeliveries(cluster.deliveries);
+    setBlockages(cluster.blockages);
+
+    const alloc = runResourceAllocation(cluster.camps, cluster.warehouses, cluster.vehicles);
+    setAllocationOutput(alloc);
+
+    const alerts = correlateOperationalAlerts(cluster.camps, cluster.warehouses, cluster.vehicles, cluster.blockages, cluster.deliveries);
+    setNotifications(alerts);
+
+    addToast('success', `Operational disaster grid deployed around GPS [${centerLat.toFixed(4)}, ${centerLng.toFixed(4)}]!`, 'Local Cluster Initialized');
+    addAuditLog('CLUSTER', `Disaster response sector created around [${centerLat.toFixed(4)}, ${centerLng.toFixed(4)}] (3 Shelters, 2 Warehouses, 2 Fleets).`);
+  };
+
+  // Complete clean slate wipe
+  const clearAllData = () => {
+    setCamps([]);
+    setWarehouses([]);
+    setVehicles([]);
+    setRequests([]);
+    setDeliveries([]);
+    setBlockages([]);
+    setAllocationOutput(null);
+    setNotifications([]);
+    addToast('info', 'All operational records wiped. System restored to 0 records (Clean Slate).', 'Clean Slate');
+    addAuditLog('SYSTEM', 'Database wiped to 0 records by coordinator.');
+  };
+
+  // Auto-detect GPS on first load
+  useEffect(() => {
+    detectUserLocation();
+  }, []);
 
   // Initial Backend Sync on Mount
   useEffect(() => {
@@ -673,15 +748,11 @@ export function ReliefProvider({ children }) {
   };
 
   const resetDemoData = () => {
-    setCamps(INITIAL_LOCATIONS);
-    setWarehouses(INITIAL_WAREHOUSES);
-    setVehicles(INITIAL_VEHICLES);
-    setRequests(INITIAL_REQUESTS);
-    setDeliveries(INITIAL_DELIVERIES);
-    setBlockages(ROAD_BLOCKAGES);
-    const alloc = runResourceAllocation(INITIAL_LOCATIONS, INITIAL_WAREHOUSES, INITIAL_VEHICLES);
-    setAllocationOutput(alloc);
-    addAuditLog('SYSTEM', `System reset by ${currentUser.name} (${currentUser.role}) to 5 Camps / 3 Warehouses / 3 Vehicles.`);
+    if (userLocation?.lat && userLocation?.lng) {
+      setupAroundCurrentLocation(userLocation.lat, userLocation.lng);
+    } else {
+      clearAllData();
+    }
   };
 
   return (
@@ -692,6 +763,11 @@ export function ReliefProvider({ children }) {
       requests,
       deliveries,
       blockages,
+      userLocation,
+      locationLoading,
+      detectUserLocation,
+      setupAroundCurrentLocation,
+      clearAllData,
       auditLogs,
       activeTab,
       setActiveTab,

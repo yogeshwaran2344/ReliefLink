@@ -20,7 +20,7 @@ export default function Module8_ReportsAnalytics() {
   const { camps, warehouses, vehicles, deliveries, allocationOutput } = useRelief();
 
   // Metrics calculation
-  const totalPopServed = camps.reduce((sum, c) => sum + c.population, 0);
+  const totalPopServed = camps.reduce((sum, c) => sum + (c.population || 0), 0);
   const totalDistributedFood = camps.reduce((sum, c) => sum + (c.received?.food || 0), 0);
   const totalDistributedWater = camps.reduce((sum, c) => sum + (c.received?.water || 0), 0);
   const totalDistributedMed = camps.reduce((sum, c) => sum + (c.received?.medical || 0), 0);
@@ -28,20 +28,20 @@ export default function Module8_ReportsAnalytics() {
 
   const completedDeliveriesCount = deliveries.filter(d => d.stage === 'Completed').length;
 
-  const totalDemand = camps.reduce((sum, c) => sum + c.demands.food + c.demands.water + c.demands.medical, 0);
+  const totalDemand = camps.reduce((sum, c) => sum + (c.demands?.food || 0) + (c.demands?.water || 0) + (c.demands?.medical || 0), 0);
   const remainingShortages = Math.max(0, totalDemand - totalSuppliesDistributed);
 
   // Warehouse capacity utilization
-  const totalWarehouseCapacityKg = warehouses.reduce((sum, w) => sum + w.capacityKg, 0);
+  const totalWarehouseCapacityKg = warehouses.reduce((sum, w) => sum + (w.capacityKg || 0), 0);
   const currentWarehouseKg = warehouses.reduce((sum, w) => {
-    return sum + (w.stock.food.total * 0.8) + (w.stock.water.total * 1.0) + (w.stock.medical.total * 1.5);
+    return sum + ((w.stock?.food?.total || 0) * 0.8) + ((w.stock?.water?.total || 0) * 1.0) + ((w.stock?.medical?.total || 0) * 1.5);
   }, 0);
-  const warehouseUtilizationPercent = Math.round((currentWarehouseKg / totalWarehouseCapacityKg) * 100);
+  const warehouseUtilizationPercent = totalWarehouseCapacityKg > 0 ? Math.round((currentWarehouseKg / totalWarehouseCapacityKg) * 100) : 0;
 
   // Vehicle payload utilization
-  const totalVehicleCapacityKg = vehicles.reduce((sum, v) => sum + v.maxCapacityKg, 0);
-  const activeFleetPayloadKg = allocationOutput?.totalAllocatedKg || 1850;
-  const vehicleUtilizationPercent = Math.min(100, Math.round((activeFleetPayloadKg / totalVehicleCapacityKg) * 100));
+  const totalVehicleCapacityKg = vehicles.reduce((sum, v) => sum + (v.maxCapacityKg || 0), 0);
+  const activeFleetPayloadKg = allocationOutput?.totalAllocatedKg || 0;
+  const vehicleUtilizationPercent = totalVehicleCapacityKg > 0 ? Math.min(100, Math.round((activeFleetPayloadKg / totalVehicleCapacityKg) * 100)) : 0;
 
   // CSV Exporter
   const downloadCSVReport = () => {

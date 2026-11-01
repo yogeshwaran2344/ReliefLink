@@ -1,7 +1,8 @@
 // Module 4: Surplus Redistribution Engine
 // Balances stock across warehouses based on regional buffer requirements
 
-export function computeSurplusRedistribution(warehouses, camps) {
+export function computeSurplusRedistribution(warehouses = [], camps = []) {
+  if (!Array.isArray(warehouses) || warehouses.length === 0) return [];
   const recommendations = [];
 
   // Define warehouse regional service zones

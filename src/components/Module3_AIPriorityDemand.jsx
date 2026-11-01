@@ -17,9 +17,9 @@ import { useRelief } from '../context/ReliefContext';
 import { calculatePriorityScore } from '../utils/aiEstimationEngine';
 
 export default function Module3_AIPriorityDemand() {
-  const { camps, warehouses, setActiveTab, triggerAIAllocation } = useRelief();
+  const { camps, warehouses, setActiveTab, triggerAIAllocation, setupAroundCurrentLocation, userLocation } = useRelief();
 
-  const [selectedCampId, setSelectedCampId] = useState('camp-a');
+  const [selectedCampId, setSelectedCampId] = useState(camps[0]?.id || null);
 
   // Compute live scores for all camps
   const scoredCamps = camps.map(camp => ({
@@ -27,7 +27,37 @@ export default function Module3_AIPriorityDemand() {
     aiAnalysis: calculatePriorityScore(camp)
   })).sort((a, b) => b.aiAnalysis.score - a.aiAnalysis.score);
 
-  const selectedCamp = scoredCamps.find(c => c.id === selectedCampId) || scoredCamps[0];
+  const selectedCamp = scoredCamps.find(c => c.id === selectedCampId) || scoredCamps[0] || null;
+
+  if (camps.length === 0) {
+    return (
+      <div className="space-y-6">
+        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-8 text-center space-y-4 shadow-xl">
+          <div className="w-16 h-16 rounded-2xl bg-indigo-500/20 text-indigo-400 flex items-center justify-center mx-auto border border-indigo-500/30">
+            <Cpu className="w-8 h-8 animate-pulse" />
+          </div>
+          <h2 className="text-xl font-bold text-white">No Camps Registered Yet (Clean Slate)</h2>
+          <p className="text-sm text-slate-300 max-w-lg mx-auto">
+            The Explainable AI (XAI) Priority Engine computes multi-factor triage scores as soon as camps are registered or deployed.
+          </p>
+          <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
+            <button
+              onClick={() => setupAroundCurrentLocation(userLocation?.lat, userLocation?.lng)}
+              className="px-5 py-2.5 bg-gradient-to-r from-indigo-600 to-rose-600 hover:from-indigo-500 hover:to-rose-500 text-white rounded-xl text-xs font-bold shadow-lg transition"
+            >
+              <span>⚡ Setup 3 Camps Around My GPS</span>
+            </button>
+            <button
+              onClick={() => setActiveTab('requests')}
+              className="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-semibold border border-slate-700 transition"
+            >
+              <span>➕ Register New Camp</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

@@ -3,7 +3,10 @@
 
 import { computeDistanceKm } from './allocationEngine';
 
-export function optimizeVehicleRoutes(vehicles, allocationPlan, warehouses, activeBlockages = []) {
+export function optimizeVehicleRoutes(vehicles = [], allocationPlan = [], warehouses = [], activeBlockages = []) {
+  if (!Array.isArray(vehicles) || vehicles.length === 0 || !Array.isArray(allocationPlan) || allocationPlan.length === 0) {
+    return [];
+  }
   // Filter available vehicles and sort by capacity descending
   const fleet = vehicles.map(v => ({
     ...v,
@@ -48,6 +51,7 @@ export function optimizeVehicleRoutes(vehicles, allocationPlan, warehouses, acti
         veh.assignedStops.push({
           campId: drop.campId,
           campName: drop.campName,
+          coordinates: drop.coordinates,
           priorityScore: drop.priorityScore,
           priorityStatus: drop.priorityStatus,
           weightKg: loadToAssign,
@@ -67,21 +71,21 @@ export function optimizeVehicleRoutes(vehicles, allocationPlan, warehouses, acti
 
   // Calculate route metrics, distances, ETAs, and apply blockage detours
   fleet.forEach(veh => {
-    const originWarehouse = warehouses.find(w => w.id === veh.currentWarehouseId) || warehouses[0];
-    let prevCoord = originWarehouse.coordinates;
+    const originWarehouse = warehouses.find(w => w.id === veh.currentWarehouseId) || warehouses[0] || { coordinates: [13.0827, 80.2707] };
+    let prevCoord = originWarehouse.coordinates || [13.0827, 80.2707];
     let totalDistKm = 0;
 
     veh.assignedStops.forEach(stop => {
-      // Find camp coord (mock lookup)
-      const campCoords = getCampCoordinates(stop.campId);
+      // Find camp coord dynamically from stop data
+      const campCoords = stop.coordinates || [prevCoord[0] + 0.012, prevCoord[1] + 0.015];
       let legDist = computeDistanceKm(prevCoord, campCoords);
 
       // Check if this route leg encounters any active road blockages
-      const isBlocked = activeBlockages.some(b => b.active && b.affectedCamps.some(c => stop.campName.includes(c)));
+      const isBlocked = activeBlockages.some(b => b.active && Array.isArray(b.affectedCamps) && b.affectedCamps.some(c => stop.campName.includes(c)));
       if (isBlocked) {
         veh.hasBlockageImpact = true;
-        veh.detourRouteUsed = 'Eastern Link Expressway Detour (+7.4 km)';
-        legDist += 7.4; // detour penalty
+        veh.detourRouteUsed = 'Eastern Bypass Detour (+4.8 km)';
+        legDist += 4.8; // detour penalty
       }
 
       totalDistKm += legDist;
@@ -89,25 +93,14 @@ export function optimizeVehicleRoutes(vehicles, allocationPlan, warehouses, acti
     });
 
     // Return to base depot
-    totalDistKm += computeDistanceKm(prevCoord, originWarehouse.coordinates);
+    totalDistKm += computeDistanceKm(prevCoord, originWarehouse.coordinates || [13.0827, 80.2707]);
     veh.estimatedDistanceKm = Math.round(totalDistKm * 10) / 10;
 
     // Average disaster zone transit speed: 32 km/h without blockage, slower in waterlogged sections
     const baseMinutes = (veh.estimatedDistanceKm / 32) * 60;
-    const blockageDelay = veh.hasBlockageImpact ? 45 : 0;
+    const blockageDelay = veh.hasBlockageImpact ? 30 : 0;
     veh.estimatedMinutes = Math.round(baseMinutes + blockageDelay);
   });
 
   return fleet;
-}
-
-function getCampCoordinates(campId) {
-  const coords = {
-    'camp-a': [19.1200, 72.8500],
-    'camp-b': [19.2180, 72.9500],
-    'camp-c': [19.0150, 72.9100],
-    'camp-d': [19.0550, 72.8350],
-    'camp-e': [19.2450, 72.8650]
-  };
-  return coords[campId] || [19.1000, 72.8800];
 }
