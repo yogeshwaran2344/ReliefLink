@@ -11,9 +11,10 @@ export function runResourceAllocation(camps = [], warehouses = [], vehicles = []
   const simWarehouses = warehouses.map(w => ({
     ...w,
     stock: {
-      food: { ...w.stock.food, availableRemaining: w.stock.food.available },
-      water: { ...w.stock.water, availableRemaining: w.stock.water.available },
-      medical: { ...w.stock.medical, availableRemaining: w.stock.medical.available }
+      food: { ...w.stock.food, availableRemaining: w.stock.food?.available ?? 0 },
+      water: { ...w.stock.water, availableRemaining: w.stock.water?.available ?? 0 },
+      medical: { ...w.stock.medical, availableRemaining: w.stock.medical?.available ?? 0 },
+      shelter: { ...(w.stock.shelter || { available: 60, reserved: 0, total: 60 }), availableRemaining: (w.stock.shelter?.available ?? 60) }
     }
   }));
 
@@ -31,10 +32,11 @@ export function runResourceAllocation(camps = [], warehouses = [], vehicles = []
   let totalAllocatedKg = 0;
 
   scoredCamps.forEach(camp => {
-    const demands = camp.demands;
-    const foodNeeded = Math.max(0, demands.food - (camp.received?.food || 0));
-    const waterNeeded = Math.max(0, demands.water - (camp.received?.water || 0));
-    const medicalNeeded = Math.max(0, demands.medical - (camp.received?.medical || 0));
+    const demands = camp.demands || {};
+    const foodNeeded = Math.max(0, (demands.food || 0) - (camp.received?.food || 0));
+    const waterNeeded = Math.max(0, (demands.water || 0) - (camp.received?.water || 0));
+    const medicalNeeded = Math.max(0, (demands.medical || 0) - (camp.received?.medical || 0));
+    const shelterNeeded = Math.max(0, (demands.shelter || 0) - (camp.received?.shelter || 0));
 
     // Calculate geo-distance to each warehouse to pick closest warehouse with stock
     const sortedWarehouses = simWarehouses.map(wh => {
@@ -45,6 +47,7 @@ export function runResourceAllocation(camps = [], warehouses = [], vehicles = []
     let allocatedFood = 0;
     let allocatedWater = 0;
     let allocatedMedical = 0;
+    let allocatedShelter = 0;
     const sourcesUsed = [];
 
     // Fulfill demand across warehouses prioritizing closest
@@ -55,6 +58,7 @@ export function runResourceAllocation(camps = [], warehouses = [], vehicles = []
       const targetFood = Math.round(foodNeeded * fulfillFactor);
       const targetWater = Math.round(waterNeeded * fulfillFactor);
       const targetMedical = Math.round(medicalNeeded * fulfillFactor);
+      const targetShelter = Math.round(shelterNeeded * fulfillFactor);
 
       // Alloc food
       const remainingFoodNeeded = targetFood - allocatedFood;
@@ -82,16 +86,26 @@ export function runResourceAllocation(camps = [], warehouses = [], vehicles = []
         wh.stock.medical.availableRemaining -= takeMed;
         sourcesUsed.push({ warehouseId: wh.id, warehouseName: wh.name, item: 'medical', qty: takeMed, distKm });
       }
+
+      // Alloc shelter
+      const remainingShelterNeeded = targetShelter - allocatedShelter;
+      if (remainingShelterNeeded > 0 && wh.stock.shelter.availableRemaining > 0) {
+        const takeShelter = Math.min(remainingShelterNeeded, wh.stock.shelter.availableRemaining);
+        allocatedShelter += takeShelter;
+        wh.stock.shelter.availableRemaining -= takeShelter;
+        sourcesUsed.push({ warehouseId: wh.id, warehouseName: wh.name, item: 'shelter', qty: takeShelter, distKm });
+      }
     });
 
     const foodShortage = Math.max(0, foodNeeded - allocatedFood);
     const waterShortage = Math.max(0, waterNeeded - allocatedWater);
     const medicalShortage = Math.max(0, medicalNeeded - allocatedMedical);
+    const shelterShortage = Math.max(0, shelterNeeded - allocatedShelter);
 
-    const totalWeightKg = (allocatedFood * 0.8) + (allocatedWater * 1.0) + (allocatedMedical * 1.5);
+    const totalWeightKg = (allocatedFood * 0.8) + (allocatedWater * 1.0) + (allocatedMedical * 1.5) + (allocatedShelter * 4.0);
     totalAllocatedKg += totalWeightKg;
 
-    // Pick best suited vehicle based on capacity and distance
+    // Pick best suited warehouse based on stock sources
     const assignedWarehouseId = sourcesUsed[0]?.warehouseId || 'wh-alpha';
     const assignedWarehouse = warehouses.find(w => w.id === assignedWarehouseId);
 
@@ -111,12 +125,19 @@ export function runResourceAllocation(camps = [], warehouses = [], vehicles = []
       coordinates: camp.coordinates,
       priorityScore: camp.priority.score,
       priorityStatus: camp.priority.status,
-      demands: { food: foodNeeded, water: waterNeeded, medical: medicalNeeded },
-      allocated: { food: allocatedFood, water: allocatedWater, medical: allocatedMedical },
-      shortages: { food: foodShortage, water: waterShortage, medical: medicalShortage },
+      demands: { food: foodNeeded, water: waterNeeded, medical: medicalNeeded, shelter: shelterNeeded },
+      allocated: { food: allocatedFood, water: allocatedWater, medical: allocatedMedical, shelter: allocatedShelter },
+      shortages: { food: foodShortage, water: waterShortage, medical: medicalShortage, shelter: shelterShortage },
+      allocatedFood,
+      allocatedWater,
+      allocatedMedical,
+      allocatedShelter,
+      allocatedWeightKg: Math.round(totalWeightKg),
       totalWeightKg: Math.round(totalWeightKg),
+      remainingShortage: { food: foodShortage, water: waterShortage, medical: medicalShortage, shelter: shelterShortage },
       primaryWarehouseId: assignedWarehouseId,
       primaryWarehouseName: assignedWarehouse?.name,
+      warehouseName: assignedWarehouse?.name,
       sourcesUsed,
       explanation: explainText
     });

@@ -29,6 +29,7 @@ export default function Module7_DeliveryVerification() {
     receivedFood: 0,
     receivedWater: 0,
     receivedMedical: 0,
+    receivedShelter: 0,
     recipientName: '',
     notes: '',
     photoProofUrl: 'https://images.unsplash.com/photo-1593113598332-cd288d649433?auto=format&fit=crop&w=600&q=80'
@@ -46,9 +47,10 @@ export default function Module7_DeliveryVerification() {
   const openVerificationModal = (del) => {
     setActiveVerificationDelivery(del);
     setVerificationForm({
-      receivedFood: del.verifiedQuantities?.food ?? del.dispatchedQuantities.food,
-      receivedWater: del.verifiedQuantities?.water ?? del.dispatchedQuantities.water,
-      receivedMedical: del.verifiedQuantities?.medical ?? del.dispatchedQuantities.medical,
+      receivedFood: del.verifiedQuantities?.food ?? del.dispatchedQuantities?.food ?? 0,
+      receivedWater: del.verifiedQuantities?.water ?? del.dispatchedQuantities?.water ?? 0,
+      receivedMedical: del.verifiedQuantities?.medical ?? del.dispatchedQuantities?.medical ?? 0,
+      receivedShelter: del.verifiedQuantities?.shelter ?? del.dispatchedQuantities?.shelter ?? 0,
       recipientName: del.recipientName || 'Dr. Ananya Roy',
       notes: del.discrepancy?.notes || '',
       photoProofUrl: del.photoProofUrl || 'https://images.unsplash.com/photo-1593113598332-cd288d649433?auto=format&fit=crop&w=600&q=80'
@@ -293,11 +295,11 @@ export default function Module7_DeliveryVerification() {
               <div className="bg-slate-800/60 p-4 rounded-xl border border-slate-700 space-y-3">
                 <div className="font-bold text-slate-200">Reconcile Dispatched vs Physical Received Counts:</div>
 
-                <div className="grid grid-cols-3 gap-3 text-center">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-center">
                   {/* Food */}
                   <div className="bg-slate-900 p-3 rounded-lg border border-slate-800">
                     <span className="text-slate-400 block text-[11px]">Food Packets</span>
-                    <span className="text-xs text-slate-500">Dispatched: <b>{activeVerificationDelivery.dispatchedQuantities.food}</b></span>
+                    <span className="text-xs text-slate-500">Dispatched: <b>{activeVerificationDelivery.dispatchedQuantities?.food || 0}</b></span>
                     <input
                       type="number"
                       min="0"
@@ -305,9 +307,9 @@ export default function Module7_DeliveryVerification() {
                       onChange={e => setVerificationForm({ ...verificationForm, receivedFood: e.target.value })}
                       className="w-full bg-slate-800 border border-slate-700 rounded px-2 py-1 mt-1 text-center font-bold text-white"
                     />
-                    {parseInt(verificationForm.receivedFood, 10) < activeVerificationDelivery.dispatchedQuantities.food && (
+                    {parseInt(verificationForm.receivedFood, 10) < (activeVerificationDelivery.dispatchedQuantities?.food || 0) && (
                       <span className="text-rose-400 text-[10px] block mt-1 font-semibold">
-                        -{activeVerificationDelivery.dispatchedQuantities.food - parseInt(verificationForm.receivedFood, 10)} missing
+                        -{(activeVerificationDelivery.dispatchedQuantities?.food || 0) - parseInt(verificationForm.receivedFood, 10)} missing
                       </span>
                     )}
                   </div>
@@ -315,7 +317,7 @@ export default function Module7_DeliveryVerification() {
                   {/* Water */}
                   <div className="bg-slate-900 p-3 rounded-lg border border-slate-800">
                     <span className="text-slate-400 block text-[11px]">Water (Liters)</span>
-                    <span className="text-xs text-slate-500">Dispatched: <b>{activeVerificationDelivery.dispatchedQuantities.water}</b></span>
+                    <span className="text-xs text-slate-500">Dispatched: <b>{activeVerificationDelivery.dispatchedQuantities?.water || 0}</b></span>
                     <input
                       type="number"
                       min="0"
@@ -328,7 +330,7 @@ export default function Module7_DeliveryVerification() {
                   {/* Medical */}
                   <div className="bg-slate-900 p-3 rounded-lg border border-slate-800">
                     <span className="text-slate-400 block text-[11px]">Medical Kits</span>
-                    <span className="text-xs text-slate-500">Dispatched: <b>{activeVerificationDelivery.dispatchedQuantities.medical}</b></span>
+                    <span className="text-xs text-slate-500">Dispatched: <b>{activeVerificationDelivery.dispatchedQuantities?.medical || 0}</b></span>
                     <input
                       type="number"
                       min="0"
@@ -336,9 +338,27 @@ export default function Module7_DeliveryVerification() {
                       onChange={e => setVerificationForm({ ...verificationForm, receivedMedical: e.target.value })}
                       className="w-full bg-slate-800 border border-slate-700 rounded px-2 py-1 mt-1 text-center font-bold text-white text-rose-300"
                     />
-                    {parseInt(verificationForm.receivedMedical, 10) < activeVerificationDelivery.dispatchedQuantities.medical && (
+                    {parseInt(verificationForm.receivedMedical, 10) < (activeVerificationDelivery.dispatchedQuantities?.medical || 0) && (
                       <span className="text-rose-400 text-[10px] block mt-1 font-semibold">
-                        -{activeVerificationDelivery.dispatchedQuantities.medical - parseInt(verificationForm.receivedMedical, 10)} missing
+                        -{(activeVerificationDelivery.dispatchedQuantities?.medical || 0) - parseInt(verificationForm.receivedMedical, 10)} missing
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Shelter */}
+                  <div className="bg-slate-900 p-3 rounded-lg border border-slate-800">
+                    <span className="text-slate-400 block text-[11px]">Shelter Kits</span>
+                    <span className="text-xs text-slate-500">Dispatched: <b>{activeVerificationDelivery.dispatchedQuantities?.shelter || 0}</b></span>
+                    <input
+                      type="number"
+                      min="0"
+                      value={verificationForm.receivedShelter}
+                      onChange={e => setVerificationForm({ ...verificationForm, receivedShelter: e.target.value })}
+                      className="w-full bg-slate-800 border border-slate-700 rounded px-2 py-1 mt-1 text-center font-bold text-white text-amber-300"
+                    />
+                    {parseInt(verificationForm.receivedShelter, 10) < (activeVerificationDelivery.dispatchedQuantities?.shelter || 0) && (
+                      <span className="text-amber-400 text-[10px] block mt-1 font-semibold">
+                        -{(activeVerificationDelivery.dispatchedQuantities?.shelter || 0) - parseInt(verificationForm.receivedShelter, 10)} missing
                       </span>
                     )}
                   </div>

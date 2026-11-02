@@ -12,7 +12,7 @@ export function optimizeVehicleRoutes(vehicles = [], allocationPlan = [], wareho
     ...v,
     assignedStops: [],
     currentLoadKg: 0,
-    cargoBreakdown: { food: 0, water: 0, medical: 0 },
+    cargoBreakdown: { food: 0, water: 0, medical: 0, shelter: 0 },
     estimatedDistanceKm: 0,
     estimatedMinutes: 0,
     hasBlockageImpact: false,
@@ -26,9 +26,10 @@ export function optimizeVehicleRoutes(vehicles = [], allocationPlan = [], wareho
 
   deliveryDrops.forEach(drop => {
     let remainingDropWeight = drop.totalWeightKg;
-    let remainingFood = drop.allocated.food;
-    let remainingWater = drop.allocated.water;
-    let remainingMedical = drop.allocated.medical;
+    let remainingFood = drop.allocated?.food ?? drop.allocatedFood ?? 0;
+    let remainingWater = drop.allocated?.water ?? drop.allocatedWater ?? 0;
+    let remainingMedical = drop.allocated?.medical ?? drop.allocatedMedical ?? 0;
+    let remainingShelter = drop.allocated?.shelter ?? drop.allocatedShelter ?? 0;
 
     // Distribute cargo among available vehicles without exceeding maxCapacityKg
     for (const veh of fleet) {
@@ -42,11 +43,13 @@ export function optimizeVehicleRoutes(vehicles = [], allocationPlan = [], wareho
         const foodChunk = Math.round(remainingFood * ratio);
         const waterChunk = Math.round(remainingWater * ratio);
         const medChunk = Math.round(remainingMedical * ratio);
+        const shelterChunk = Math.round(remainingShelter * ratio);
 
         veh.currentLoadKg += loadToAssign;
         veh.cargoBreakdown.food += foodChunk;
         veh.cargoBreakdown.water += waterChunk;
         veh.cargoBreakdown.medical += medChunk;
+        veh.cargoBreakdown.shelter += shelterChunk;
 
         veh.assignedStops.push({
           campId: drop.campId,
@@ -58,6 +61,7 @@ export function optimizeVehicleRoutes(vehicles = [], allocationPlan = [], wareho
           food: foodChunk,
           water: waterChunk,
           medical: medChunk,
+          shelter: shelterChunk,
           sequence: veh.assignedStops.length + 1
         });
 
@@ -65,6 +69,7 @@ export function optimizeVehicleRoutes(vehicles = [], allocationPlan = [], wareho
         remainingFood -= foodChunk;
         remainingWater -= waterChunk;
         remainingMedical -= medChunk;
+        remainingShelter -= shelterChunk;
       }
     }
   });

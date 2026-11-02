@@ -51,7 +51,8 @@ def verify_receipt(delivery_id: str, ver_in: DeliveryVerificationCreate, db: Ses
     f_missing = max(0, deliv.dispatched_food - ver_in.verified_food)
     w_missing = max(0, deliv.dispatched_water - ver_in.verified_water)
     m_missing = max(0, deliv.dispatched_medical - ver_in.verified_medical)
-    has_disc = (f_missing > 0 or w_missing > 0 or m_missing > 0)
+    s_missing = max(0, getattr(deliv, 'dispatched_shelter', 0) - getattr(ver_in, 'verified_shelter', 0))
+    has_disc = (f_missing > 0 or w_missing > 0 or m_missing > 0 or s_missing > 0)
 
     # Check if verification already exists
     ver = db.query(DeliveryVerification).filter(DeliveryVerification.delivery_id == delivery_id).first()
@@ -61,9 +62,11 @@ def verify_receipt(delivery_id: str, ver_in: DeliveryVerificationCreate, db: Ses
             verified_food=ver_in.verified_food,
             verified_water=ver_in.verified_water,
             verified_medical=ver_in.verified_medical,
+            verified_shelter=getattr(ver_in, 'verified_shelter', 0),
             missing_food=f_missing,
             missing_water=w_missing,
             missing_medical=m_missing,
+            missing_shelter=s_missing,
             recipient_name=ver_in.recipient_name,
             acknowledgment_code=f"ACK-SIG-{datetime.utcnow().strftime('%H%M%S')}",
             notes=ver_in.notes,
@@ -75,9 +78,11 @@ def verify_receipt(delivery_id: str, ver_in: DeliveryVerificationCreate, db: Ses
         ver.verified_food = ver_in.verified_food
         ver.verified_water = ver_in.verified_water
         ver.verified_medical = ver_in.verified_medical
+        ver.verified_shelter = getattr(ver_in, 'verified_shelter', 0)
         ver.missing_food = f_missing
         ver.missing_water = w_missing
         ver.missing_medical = m_missing
+        ver.missing_shelter = s_missing
         ver.recipient_name = ver_in.recipient_name
         ver.notes = ver_in.notes
         ver.has_discrepancy = has_disc
@@ -93,6 +98,8 @@ def verify_receipt(delivery_id: str, ver_in: DeliveryVerificationCreate, db: Ses
         loc.received_food += ver_in.verified_food
         loc.received_water += ver_in.verified_water
         loc.received_medical += ver_in.verified_medical
+        if hasattr(loc, 'received_shelter'):
+            loc.received_shelter += getattr(ver_in, 'verified_shelter', 0)
 
     db.commit()
     db.refresh(ver)

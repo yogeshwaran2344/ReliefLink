@@ -203,11 +203,13 @@ class DeliveryCreate(BaseModel):
     dispatched_food: int
     dispatched_water: int
     dispatched_medical: int
+    dispatched_shelter: int = 0
 
 class DeliveryVerificationCreate(BaseModel):
     verified_food: int
     verified_water: int
     verified_medical: int
+    verified_shelter: int = 0
     recipient_name: str
     notes: Optional[str] = None
     photo_proof_url: Optional[str] = None
@@ -218,9 +220,11 @@ class DeliveryVerificationResponse(BaseModel):
     verified_food: int
     verified_water: int
     verified_medical: int
+    verified_shelter: int = 0
     missing_food: int
     missing_water: int
     missing_medical: int
+    missing_shelter: int = 0
     recipient_name: str
     acknowledgment_code: Optional[str]
     notes: Optional[str]
@@ -241,6 +245,7 @@ class DeliveryResponse(BaseModel):
     dispatched_food: int
     dispatched_water: int
     dispatched_medical: int
+    dispatched_shelter: int = 0
     created_timestamp: datetime
     dispatched_timestamp: Optional[datetime]
     arrived_timestamp: Optional[datetime]

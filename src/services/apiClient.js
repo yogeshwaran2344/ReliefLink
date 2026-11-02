@@ -1,8 +1,8 @@
 // ReliefLink Frontend REST API Client
 // Connects to FastAPI Backend at /api/v1 (in production on Render) or http://127.0.0.1:8000/api/v1 (locally)
 
-const API_BASE = (typeof window !== 'undefined' && window.location.hostname === 'localhost' && window.location.port === '3000')
-  ? 'http://127.0.0.1:8000/api/v1'
+const API_BASE = (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') && window.location.port !== '8000')
+  ? (window.location.port === '3000' ? '/api/v1' : 'http://127.0.0.1:8000/api/v1')
   : '/api/v1';
 
 async function fetchJSON(url, options = {}) {

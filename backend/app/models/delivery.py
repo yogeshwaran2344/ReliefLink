@@ -21,6 +21,7 @@ class Delivery(Base):
     dispatched_food = Column(Integer, default=0)
     dispatched_water = Column(Integer, default=0)
     dispatched_medical = Column(Integer, default=0)
+    dispatched_shelter = Column(Integer, default=0)
 
     created_timestamp = Column(DateTime, default=datetime.utcnow)
     dispatched_timestamp = Column(DateTime, nullable=True)
@@ -42,10 +43,12 @@ class DeliveryVerification(Base):
     verified_food = Column(Integer, default=0)
     verified_water = Column(Integer, default=0)
     verified_medical = Column(Integer, default=0)
+    verified_shelter = Column(Integer, default=0)
 
     missing_food = Column(Integer, default=0)
     missing_water = Column(Integer, default=0)
     missing_medical = Column(Integer, default=0)
+    missing_shelter = Column(Integer, default=0)
 
     recipient_name = Column(String(255), nullable=False)
     acknowledgment_code = Column(String(100), nullable=True)

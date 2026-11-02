@@ -55,7 +55,7 @@ export default function Module1_Dashboard() {
 
   // Available stock across all warehouses
   const totalAvailableStockUnits = warehouses.reduce((acc, wh) => {
-    return acc + (wh.stock?.food?.available || 0) + (wh.stock?.water?.available || 0) + (wh.stock?.medical?.available || 0);
+    return acc + (wh.stock?.food?.available || 0) + (wh.stock?.water?.available || 0) + (wh.stock?.medical?.available || 0) + (wh.stock?.shelter?.available || 0);
   }, 0);
 
   const totalDepotCapacityKg = warehouses.reduce((acc, wh) => acc + (wh.capacityKg || 0), 0);
@@ -66,8 +66,8 @@ export default function Module1_Dashboard() {
   const pendingDeliveries = deliveries.filter(d => d.stage !== 'Completed').length;
 
   // Demand & Fulfillment percentages
-  const totalDemanded = camps.reduce((acc, c) => acc + (c.demands?.food || 0) + (c.demands?.water || 0) + (c.demands?.medical || 0), 0);
-  const totalReceived = camps.reduce((acc, c) => acc + (c.received?.food || 0) + (c.received?.water || 0) + (c.received?.medical || 0), 0);
+  const totalDemanded = camps.reduce((acc, c) => acc + (c.demands?.food || 0) + (c.demands?.water || 0) + (c.demands?.medical || 0) + (c.demands?.shelter || 0), 0);
+  const totalReceived = camps.reduce((acc, c) => acc + (c.received?.food || 0) + (c.received?.water || 0) + (c.received?.medical || 0) + (c.received?.shelter || 0), 0);
   const overallShortagePercent = totalDemanded > 0 ? Math.round(((totalDemanded - totalReceived) / totalDemanded) * 100) : 0;
   const overallFulfillmentPercent = totalDemanded > 0 ? Math.min(100, Math.round((totalReceived / totalDemanded) * 100)) : 100;
 
@@ -222,7 +222,7 @@ export default function Module1_Dashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left Column (2 Cols): Live Map View */}
         <div className="lg:col-span-2 space-y-3">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="flex items-center gap-2">
               <span className="w-2.5 h-2.5 rounded-full bg-blue-500 animate-pulse"></span>
               <h2 className="text-sm font-bold text-white uppercase tracking-wider">
@@ -232,9 +232,22 @@ export default function Module1_Dashboard() {
                 ({totalLocations} Camps • {warehouses.length} Depots • {vehicles.length} Fleet)
               </span>
             </div>
-            <span className="text-[11px] text-slate-400 font-mono">
-              GPS: {userLocation ? `${userLocation.lat}, ${userLocation.lng}` : 'Standby'}
-            </span>
+            <div className="flex items-center gap-2">
+              <span className="text-[11px] text-slate-300 font-mono bg-slate-900/90 px-2.5 py-1 rounded-lg border border-slate-700/80 flex items-center gap-1.5">
+                <span className={`w-2 h-2 rounded-full ${userLocation ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`}></span>
+                <span>
+                  {userLocation ? `GPS: ${userLocation.lat}, ${userLocation.lng} (±${userLocation.accuracy}m)` : 'Locating GPS...'}
+                </span>
+              </span>
+              <button
+                onClick={detectUserLocation}
+                disabled={locationLoading}
+                className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 transition"
+                title="Refresh Real-Time GPS Coordinates"
+              >
+                <Compass className={`w-3.5 h-3.5 text-blue-400 ${locationLoading ? 'animate-spin' : ''}`} />
+              </button>
+            </div>
           </div>
 
           <MapView height="520px" />

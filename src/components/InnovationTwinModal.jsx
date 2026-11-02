@@ -94,10 +94,10 @@ export default function InnovationTwinModal({ isOpen, onClose }) {
                 <div className="flex justify-between items-center">
                   <div>
                     <h3 className="font-bold text-white text-sm">
-                      Sentinel-2 Synthetic Aperture Radar (SAR) Forecast Inundation
+                      Sentinel-1 Synthetic Aperture Radar (SAR) Forecast Inundation
                     </h3>
                     <p className="text-slate-400 text-[11px]">
-                      Projected 24-hour storm surge water stage:
+                      Sentinel-1 C-band SAR cloud-penetrating radar feed • Projected 24-hour storm surge:
                     </p>
                   </div>
                   <span className="font-mono text-purple-300 font-bold bg-purple-500/20 px-3 py-1 rounded-lg border border-purple-500/30 text-sm">

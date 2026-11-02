@@ -28,10 +28,12 @@ class AffectedLocation(Base):
     received_food = Column(Integer, default=0)
     received_water = Column(Integer, default=0)
     received_medical = Column(Integer, default=0)
+    received_shelter = Column(Integer, default=0)
 
     allocated_food = Column(Integer, default=0)
     allocated_water = Column(Integer, default=0)
     allocated_medical = Column(Integer, default=0)
+    allocated_shelter = Column(Integer, default=0)
 
     access_road_condition = Column(String(255), default="Operational")
     contact_person = Column(String(255), nullable=True)

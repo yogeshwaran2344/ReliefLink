@@ -256,6 +256,7 @@ export default function Module5_AllocationEngine() {
                 <th className="px-4 py-3 text-center">Food (Packets)</th>
                 <th className="px-4 py-3 text-center">Water (Liters)</th>
                 <th className="px-4 py-3 text-center">Medical (Kits)</th>
+                <th className="px-4 py-3 text-center">Shelter (Kits)</th>
                 <th className="px-4 py-3">Supplying Warehouse</th>
                 <th className="px-4 py-3">Cargo Weight</th>
                 <th className="px-4 py-3 text-right">Remaining Shortage</th>
@@ -264,14 +265,14 @@ export default function Module5_AllocationEngine() {
             <tbody className="divide-y divide-slate-800">
               {plan.length === 0 ? (
                 <tr>
-                  <td colSpan="8" className="px-4 py-8 text-center text-slate-400">
+                  <td colSpan="9" className="px-4 py-8 text-center text-slate-400">
                     <p className="font-semibold text-white">No active allocations to compute (Clean Slate).</p>
                     <p className="text-xs text-slate-500 mt-1">Register camps or initialize a disaster grid around your GPS to run multi-depot optimization.</p>
                   </td>
                 </tr>
               ) : (
                 plan.map((item, idx) => (
-                  <tr key={item.campId} className="hover:bg-slate-800/40 transition">
+                  <tr key={item.campId || idx} className="hover:bg-slate-800/40 transition">
                     <td className="px-4 py-3.5">
                       <div className="font-bold text-white">{item.campName}</div>
                       <div className="text-[11px] text-slate-400 font-mono">ID: {item.campId}</div>
@@ -288,28 +289,33 @@ export default function Module5_AllocationEngine() {
                       </span>
                     </td>
                     <td className="px-4 py-3.5 text-center font-mono font-bold text-slate-200">
-                      {item.allocatedFood} pkts
+                      {item.allocatedFood ?? item.allocated?.food ?? 0} pkts
                     </td>
                     <td className="px-4 py-3.5 text-center font-mono font-bold text-sky-400">
-                      {item.allocatedWater} L
+                      {item.allocatedWater ?? item.allocated?.water ?? 0} L
                     </td>
                     <td className="px-4 py-3.5 text-center font-mono font-bold text-emerald-400">
-                      {item.allocatedMedical} kits
+                      {item.allocatedMedical ?? item.allocated?.medical ?? 0} kits
+                    </td>
+                    <td className="px-4 py-3.5 text-center font-mono font-bold text-amber-400">
+                      {item.allocatedShelter ?? item.allocated?.shelter ?? 0} kits
                     </td>
                     <td className="px-4 py-3.5">
                       <span className="px-2 py-1 rounded bg-slate-800 text-slate-300 font-medium text-[11px]">
-                        🏢 {item.warehouseName}
+                        🏢 {item.warehouseName || item.primaryWarehouseName || 'Central Hub'}
                       </span>
                     </td>
                     <td className="px-4 py-3.5 font-mono text-slate-300 font-semibold">
-                      {item.allocatedWeightKg} kg
+                      {item.allocatedWeightKg ?? item.totalWeightKg ?? 0} kg
                     </td>
                     <td className="px-4 py-3.5 text-right font-mono">
-                      {item.remainingShortage.food === 0 && item.remainingShortage.water === 0 ? (
+                      {(item.remainingShortage?.food || item.shortages?.food || 0) === 0 &&
+                       (item.remainingShortage?.water || item.shortages?.water || 0) === 0 &&
+                       (item.remainingShortage?.shelter || item.shortages?.shelter || 0) === 0 ? (
                         <span className="text-emerald-400 font-bold">0 (Fulfilled)</span>
                       ) : (
                         <span className="text-amber-400 font-bold">
-                          -{item.remainingShortage.food}F / -{item.remainingShortage.water}W
+                          -{item.remainingShortage?.food ?? item.shortages?.food ?? 0}F / -{item.remainingShortage?.water ?? item.shortages?.water ?? 0}W / -{item.remainingShortage?.shelter ?? item.shortages?.shelter ?? 0}S
                         </span>
                       )}
                     </td>

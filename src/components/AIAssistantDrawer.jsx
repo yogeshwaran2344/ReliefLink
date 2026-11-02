@@ -15,16 +15,17 @@ import {
   ArrowRight
 } from 'lucide-react';
 import { useRelief } from '../context/ReliefContext';
+import { calculatePriorityScore } from '../utils/aiEstimationEngine';
 
 export default function AIAssistantDrawer({ isOpen, onClose }) {
-  const { camps, warehouses, vehicles, blockages, deliveries, setActiveTab } = useRelief();
+  const { camps, warehouses, vehicles, blockages, deliveries, userLocation, setActiveTab } = useRelief();
 
   const [inputQuery, setInputQuery] = useState('');
   const [messages, setMessages] = useState([
     {
       id: 'm1',
       sender: 'ai',
-      text: 'ReliefLink Operational AI Assistant online. Grounded in live disaster telemetry across 5 Camps, 3 Depots, and 3 Fleet Convoys. How can I assist disaster coordination?',
+      text: 'ReliefLink Operational AI Assistant online. Grounded in live disaster telemetry across your operational grid. How can I assist with triage prioritization, inventory rebalancing, or route hazards today?',
       timestamp: 'Just now'
     }
   ]);
@@ -64,17 +65,42 @@ export default function AIAssistantDrawer({ isOpen, onClose }) {
       const lower = q.toLowerCase();
 
       if (lower.includes('which camp') || lower.includes('help first') || lower.includes('critical')) {
-        const topCamp = [...camps].sort((a, b) => (b.priorityScore || 0) - (a.priorityScore || 0))[0] || camps[0];
-        reply = `**${topCamp.name}** requires immediate priority assistance (Triage Urgency Score: **${topCamp.priorityScore || 95}/100 - Critical**).\n\nKey Deficits:\n- Population: ${topCamp.population} displaced persons\n- Reported Casualties: ${topCamp.injuredCount || 65} injured\n- Potable Water Shortage: ${topCamp.waterDemand - (topCamp.allocatedWater || 0)} Liters deficit\n\nRecommendation: Dispatch RL-01 Heavy Truck from Central Depot Alpha immediately.`;
+        if (!camps || camps.length === 0) {
+          reply = `No affected disaster camps are currently registered on the operational grid (Clean Slate mode).\n\nTo begin triage analysis:\n- Click **⚡ Deploy Grid at My GPS** on the dashboard to deploy an operational sector around your real coordinates.\n- Or open **Relief Requests** to register a new camp and submit urgent supply requisitions.`;
+        } else {
+          const scored = camps.map(c => ({
+            ...c,
+            priority: calculatePriorityScore(c)
+          })).sort((a, b) => b.priority.score - a.priority.score);
+
+          const topCamp = scored[0];
+          const waterDeficit = Math.max(0, (topCamp.demands?.water || 0) - (topCamp.received?.water || 0));
+          const foodDeficit = Math.max(0, (topCamp.demands?.food || 0) - (topCamp.received?.food || 0));
+          const shelterDeficit = Math.max(0, (topCamp.demands?.shelter || 0) - (topCamp.received?.shelter || 0));
+
+          reply = `**${topCamp.name}** requires immediate priority assistance (Triage Urgency Score: **${topCamp.priority.score}/100 - ${topCamp.priority.status}**).\n\nKey Deficits:\n- Displaced Population: ${topCamp.population?.toLocaleString()} people\n- Reported Casualties: ${topCamp.injured} injured\n- Potable Water Needed: ${waterDeficit} Liters\n- Food Packets Needed: ${foodDeficit} Packets\n- Shelter Kits Needed: ${shelterDeficit} Kits\n\nDecision Logic:\n"${topCamp.priority.explanation}"\n\nRecommendation: Prioritize emergency convoy allocation in Module 5.`;
+        }
       } else if (lower.includes('surplus') || lower.includes('medical') || lower.includes('kits')) {
-        const whGamma = warehouses.find(w => w.id === 'wh-3') || warehouses[2];
-        reply = `**${whGamma?.name || 'Warehouse Gamma'}** holds the largest surplus of trauma stabilization supplies (**${whGamma?.inventory?.medical || 180} kits available**), exceeding its local camp commitment buffer by +65 kits.\n\nReliefLink has recommended a **Surplus Inter-Depot Redistribution** transfer to Depot Alpha to fulfill pending requisitions.`;
+        if (!warehouses || warehouses.length === 0) {
+          reply = `No regional supply depots are currently provisioned. Initialize depots around your GPS location to track warehouse buffers and inter-depot surplus transfers.`;
+        } else {
+          const bestMedWh = [...warehouses].sort((a, b) => (b.stock?.medical?.available || 0) - (a.stock?.medical?.available || 0))[0];
+          reply = `**${bestMedWh.name}** currently holds the largest buffer of trauma stabilization supplies (**${bestMedWh.stock?.medical?.available || 0} kits available**).\n\nReliefLink's Autonomous Surplus Redistribution engine monitors inter-depot buffers and recommends transfers if neighbouring depots experience acute deficits.`;
+        }
       } else if (lower.includes('warehouse beta') || lower.includes('unavailable') || lower.includes('fails') || lower.includes('floods')) {
-        reply = `**Simulated Failure Impact Analysis:**\nIf Warehouse Beta is rendered offline:\n- 850 food rations and 1,200L water committed to Camps B & C must immediately failover to Depot Alpha and Gamma.\n- Route latencies will increase by **+18.4 km (+32 mins)**.\n- Recommendation: Enable What-If Simulator with Preset 3 to view rebalanced simplex allocation curves.`;
+        if (!warehouses || warehouses.length === 0) {
+          reply = `Depot failure simulation requires active warehouses. Deploy an operational grid to test cascading failovers.`;
+        } else {
+          reply = `**Simulated Failure Impact Analysis:**\nIf a primary regional warehouse becomes submerged:\n- Local camp commitments immediately failover to adjacent active depots.\n- Autonomous inter-depot surplus balancing reallocates reserve buffers.\n- Recommendation: Enable the **What-If Scenario Simulator** to evaluate real-time rebalanced curves.`;
+        }
       } else if (lower.includes('delayed') || lower.includes('delivery') || lower.includes('transit')) {
-        reply = `**Convoys En-Route Status:**\n- **DEL-2026-001 (RL-01):** En route to Camp A. Detoured via Eastern Link due to Highway 4 causeway blockage (+7.4 km). Estimated delay: +14 mins.\n- **DEL-2026-002 (RL-02):** Arrived at Camp B. Awaiting ground verification.\n- **DEL-2026-003 (RL-03):** Staged at Depot Gamma for bulk water replenishment.`;
+        if (!deliveries || deliveries.length === 0) {
+          reply = `There are currently no active delivery convoys in transit. Once an allocation plan is dual-approved in Module 5, dispatch missions and digital QR chain-of-custody passes will be tracked live.`;
+        } else {
+          reply = `**Active Convoy Pipeline (${deliveries.length} Missions):**\n` + deliveries.map(d => `- **${d.deliveryCode} (${d.vehicleName}):** Stage ${d.stageIndex}/6: ${d.stage} ➔ ${d.targetLocationName} (${d.dispatchedQuantities?.food || 0} Food, ${d.dispatchedQuantities?.water || 0}L Water, ${d.dispatchedQuantities?.shelter || 0} Shelter)`).join('\n');
+        }
       } else {
-        reply = `Understood. Analyzing operational telemetry for "${q}". Current system status: 5 Camps registered, 3 Depots active, 3 Fleet vehicles online. Road hazard active on Highway 4. Overall supply shortage index: 18%.`;
+        reply = `Operational Telemetry Report for "${q}":\n- Camps Registered: ${camps.length}\n- Supply Depots Online: ${warehouses.length}\n- Active Fleets: ${vehicles.length}\n- Deliveries in Pipeline: ${deliveries.length}\n- Geolocation Anchor: ${userLocation ? `Locked at ${userLocation.lat}, ${userLocation.lng}` : 'Standby'}`;
       }
 
       setMessages(prev => [
@@ -87,7 +113,7 @@ export default function AIAssistantDrawer({ isOpen, onClose }) {
         }
       ]);
       setIsTyping(false);
-    }, 600);
+    }, 500);
   };
 
   return (

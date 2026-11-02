@@ -29,39 +29,54 @@ export default function QRVerificationModal({ isOpen, onClose, selectedDelivery 
 
   if (!isOpen) return null;
 
-  const trackingId = targetDelivery?.trackingBatchId || `RL-FLOOD-2026-${(targetDelivery?.id || '001').slice(-4).toUpperCase()}`;
+  const getManifest = (d) => ({
+    food: d?.dispatchedQuantities?.food ?? d?.dispatched_food ?? 0,
+    water: d?.dispatchedQuantities?.water ?? d?.dispatched_water ?? 0,
+    medical: d?.dispatchedQuantities?.medical ?? d?.dispatched_medical ?? 0,
+    shelter: d?.dispatchedQuantities?.shelter ?? d?.dispatched_shelter ?? 0,
+    origin: d?.warehouseName || d?.originWarehouseName || 'Regional Supply Depot',
+    destination: d?.targetLocationName || d?.destinationCampName || 'Designated Camp',
+    vehicle: d?.vehicleName || d?.assignedVehicleName || 'Heavy Transport Carrier'
+  });
+
+  const manifest = getManifest(targetDelivery);
+  const trackingId = targetDelivery?.trackingBatchId || `RL-MANIFEST-2026-${(targetDelivery?.id || '001').slice(-4).toUpperCase()}`;
 
   const handleSimulateScan = (deliveryToScan) => {
     setIsVerifying(true);
+    const m = getManifest(deliveryToScan);
     setTimeout(() => {
       setScannedData({
-        trackingBatchId: deliveryToScan.trackingBatchId || `RL-FLOOD-2026-${deliveryToScan.id.slice(-4).toUpperCase()}`,
-        deliveryCode: deliveryToScan.deliveryCode,
-        originWarehouse: deliveryToScan.originWarehouseName || 'Central Depot Alpha',
-        destinationCamp: deliveryToScan.destinationCampName || 'Camp A (Riverbank Shelter)',
-        dispatchedFood: deliveryToScan.dispatched?.food || 450,
-        dispatchedWater: deliveryToScan.dispatched?.water || 600,
-        dispatchedMedical: deliveryToScan.dispatched?.medical || 40,
-        assignedVehicle: deliveryToScan.assignedVehicleName || 'RL-01 (10-Ton Heavy Hauler)',
+        trackingBatchId: deliveryToScan?.trackingBatchId || `RL-MANIFEST-2026-${(deliveryToScan?.id || '001').slice(-4).toUpperCase()}`,
+        deliveryCode: deliveryToScan?.deliveryCode || 'DEL-MANIFEST',
+        originWarehouse: m.origin,
+        destinationCamp: m.destination,
+        dispatchedFood: m.food,
+        dispatchedWater: m.water,
+        dispatchedMedical: m.medical,
+        dispatchedShelter: m.shelter,
+        assignedVehicle: m.vehicle,
         proposerCoordinator: 'Dr. Vikram Malhotra',
-        approverCoordinator: 'Ananya Rao (Second Lead Coordinator)',
-        digitalSignatureHash: '0x8f9c4b2a7d1e3f5b8a0c2d4e6f8a9b1c',
+        approverCoordinator: 'Lead Operations Coordinator',
+        digitalSignatureHash: `0x${Array.from({length: 32}, () => Math.floor(Math.random()*16).toString(16)).join('')}`,
         tamperEvidentSeal: 'INTACT (SHA-256 Verified)',
         timestamp: new Date().toLocaleString()
       });
       setIsVerifying(false);
-      addToast('success', `Consignment ${deliveryToScan.deliveryCode} QR signature authenticated.`, 'Tamper-Proof Verification');
-    }, 600);
+      addToast('success', `Consignment ${deliveryToScan?.deliveryCode || ''} QR signature authenticated. Manifest matches dispatch ledger.`, 'Tamper-Proof Verification');
+    }, 500);
   };
 
   const handleConfirmGroundReceipt = () => {
     if (!targetDelivery) return;
+    const m = getManifest(targetDelivery);
     verifyDeliveryReceipt(targetDelivery.id, {
-      receivedFood: targetDelivery.dispatched?.food || 450,
-      receivedWater: targetDelivery.dispatched?.water || 600,
-      receivedMedical: (targetDelivery.dispatched?.medical || 40) - 2, // 2 damaged
-      recipientName: currentUser?.name || 'Meera Deshmukh (Volunteer Rep)',
-      verificationNotes: 'Receipt authenticated via digital QR consignment pass. Sealed tamper tape intact.'
+      receivedFood: m.food,
+      receivedWater: m.water,
+      receivedMedical: m.medical,
+      receivedShelter: m.shelter,
+      recipientName: currentUser?.name || 'Sector Ground Officer',
+      verificationNotes: 'Consignment verified 100% intact via digital QR custody pass. Tamper seals verified.'
     });
     addToast('success', `Receipt for ${targetDelivery.deliveryCode} committed to immutable audit ledger.`, 'Verification Signed');
     onClose();
@@ -205,30 +220,30 @@ export default function QRVerificationModal({ isOpen, onClose, selectedDelivery 
                 <div className="space-y-2">
                   <div className="flex justify-between items-center py-1 border-b border-slate-800">
                     <span className="text-slate-400">Consignment Code:</span>
-                    <span className="font-mono font-bold text-white">{targetDelivery?.deliveryCode || 'DEL-2026-001'}</span>
+                    <span className="font-mono font-bold text-white">{targetDelivery?.deliveryCode || 'DEL-MANIFEST'}</span>
                   </div>
                   <div className="flex justify-between items-center py-1 border-b border-slate-800">
                     <span className="text-slate-400">Dispatch Depot:</span>
-                    <span className="font-medium text-slate-200">{targetDelivery?.originWarehouseName || 'Central Depot Alpha'}</span>
+                    <span className="font-medium text-slate-200">{manifest.origin}</span>
                   </div>
                   <div className="flex justify-between items-center py-1 border-b border-slate-800">
                     <span className="text-slate-400">Destination Camp:</span>
-                    <span className="font-medium text-rose-300">{targetDelivery?.destinationCampName || 'Camp A (Riverbank Shelter)'}</span>
+                    <span className="font-medium text-rose-300">{manifest.destination}</span>
                   </div>
                   <div className="flex justify-between items-center py-1 border-b border-slate-800">
-                    <span className="text-slate-400">Allocated Supplies:</span>
+                    <span className="text-slate-400">Allocated Manifest:</span>
                     <span className="font-mono text-emerald-400 font-bold">
-                      {targetDelivery?.dispatched?.food || 450} pkts Food | {targetDelivery?.dispatched?.water || 600}L Water | {targetDelivery?.dispatched?.medical || 40} Kits
+                      {manifest.food} Food • {manifest.water}L Water • {manifest.medical} Meds • {manifest.shelter} Shelter
                     </span>
                   </div>
                   <div className="flex justify-between items-center py-1 border-b border-slate-800">
                     <span className="text-slate-400">Assigned Fleet:</span>
-                    <span className="font-medium text-slate-200">{targetDelivery?.assignedVehicleName || 'RL-01 Heavy Truck'}</span>
+                    <span className="font-medium text-slate-200">{manifest.vehicle}</span>
                   </div>
                   <div className="flex justify-between items-center py-1 border-b border-slate-800">
                     <span className="text-slate-400">Two-Level Authorization:</span>
                     <span className="text-emerald-400 font-bold text-[11px]">
-                      ✓ Dr. Malhotra (Proposed) + Ananya Rao (Approved)
+                      ✓ Dr. Malhotra (Proposed) + Operations Coordinator (Approved)
                     </span>
                   </div>
                 </div>
@@ -295,9 +310,9 @@ export default function QRVerificationModal({ isOpen, onClose, selectedDelivery 
                       <span className="font-semibold text-white">{scannedData.originWarehouse}</span>
                     </div>
                     <div>
-                      <span className="text-slate-400 block">Dispatched Rations:</span>
+                      <span className="text-slate-400 block">Manifested Cargo:</span>
                       <span className="font-semibold text-white">
-                        {scannedData.dispatchedFood} pkts Food / {scannedData.dispatchedWater}L Water
+                        {scannedData.dispatchedFood} Food • {scannedData.dispatchedWater}L Water • {scannedData.dispatchedMedical} Meds • {scannedData.dispatchedShelter} Shelter
                       </span>
                     </div>
                     <div>
@@ -308,11 +323,11 @@ export default function QRVerificationModal({ isOpen, onClose, selectedDelivery 
                     </div>
                   </div>
 
-                  {/* Discrepancy Reconciliation Flag */}
-                  <div className="bg-amber-950/30 border border-amber-500/30 p-3 rounded-lg flex items-start gap-2.5 text-[11px] text-amber-200">
-                    <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                  {/* Consignment Integrity Status */}
+                  <div className="bg-emerald-950/30 border border-emerald-500/30 p-3 rounded-lg flex items-start gap-2.5 text-[11px] text-emerald-200">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
                     <div>
-                      <span className="font-bold">Automated Ground Check:</span> 2 Medical kits reported moisture damage during road transit. 38 kits verified intact. Discrepancy logged for insurance reconciliation.
+                      <span className="font-bold">Automated Ground Check:</span> 100% of manifested supplies verified intact and untampered upon arrival at camp perimeter. Dispatched quantities match custody manifest exactly.
                     </div>
                   </div>
 

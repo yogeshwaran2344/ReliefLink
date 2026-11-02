@@ -146,20 +146,54 @@ export function ReliefProvider({ children }) {
     setAuditLogs(prev => [newLog, ...prev.slice(0, 49)]);
   };
 
-  // Real GPS Geolocation Auto-Detection
+  // Real GPS Geolocation Auto-Detection with IP Geolocation Fallback
   const detectUserLocation = () => {
+    setLocationLoading(true);
+
+    const tryIpFallback = () => {
+      fetch('https://ipapi.co/json/')
+        .then(res => res.json())
+        .then(data => {
+          if (data && data.latitude && data.longitude) {
+            const loc = {
+              lat: Number(Number(data.latitude).toFixed(5)),
+              lng: Number(Number(data.longitude).toFixed(5)),
+              accuracy: 500,
+              city: data.city || '',
+              region: data.region || '',
+              source: 'IP Geolocation'
+            };
+            setUserLocation(loc);
+            setLocationLoading(false);
+            addToast('info', `Location acquired via IP: ${data.city || 'Regional Sector'} (${loc.lat}, ${loc.lng})`, 'Location Locked');
+            addAuditLog('GPS', `IP Geolocation acquired: [${loc.lat}, ${loc.lng}] (${data.city || 'Regional'}, ${data.country_name || ''})`);
+          } else {
+            fallbackDefault();
+          }
+        })
+        .catch(() => fallbackDefault());
+    };
+
+    const fallbackDefault = () => {
+      const defaultLoc = { lat: 13.0827, lng: 80.2707, accuracy: 50, source: 'Regional Default' };
+      setUserLocation(defaultLoc);
+      setLocationLoading(false);
+      addToast('info', 'Operating with standard South Asia command center coordinates [13.0827, 80.2707].', 'GPS Notice');
+    };
+
     if (typeof window === 'undefined' || !navigator?.geolocation) {
-      addToast('info', 'Geolocation not supported by this browser. Defaulting to standard regional coordinates.', 'GPS Service');
+      tryIpFallback();
       return;
     }
-    setLocationLoading(true);
+
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         const { latitude, longitude, accuracy } = pos.coords;
         const loc = {
           lat: Number(latitude.toFixed(5)),
           lng: Number(longitude.toFixed(5)),
-          accuracy: Math.round(accuracy)
+          accuracy: Math.round(accuracy),
+          source: 'Browser GPS Sensor'
         };
         setUserLocation(loc);
         setLocationLoading(false);
@@ -167,13 +201,10 @@ export function ReliefProvider({ children }) {
         addAuditLog('GPS', `User GPS telemetry acquired: [${loc.lat}, ${loc.lng}] (Accuracy: ±${loc.accuracy}m)`);
       },
       (err) => {
-        console.warn('Geolocation lookup notice:', err.message);
-        setLocationLoading(false);
-        // Default to a sensible fallback (e.g., Chennai / South Asia region) without breaking the app
-        setUserLocation({ lat: 13.0827, lng: 80.2707, accuracy: 50, isFallback: true });
-        addToast('info', 'GPS permission prompt dismissed or unavailable. Operating with interactive map coordinates.', 'GPS Notice');
+        console.warn('Browser GPS permission ungranted or timed out, trying IP geolocation:', err.message);
+        tryIpFallback();
       },
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+      { enableHighAccuracy: true, timeout: 7000, maximumAge: 30000 }
     );
   };
 
@@ -689,22 +720,25 @@ export function ReliefProvider({ children }) {
 
     setDeliveries(prev => prev.map(del => {
       if (del.id === deliveryId) {
-        const fReceived = parseInt(verificationData.receivedFood, 10);
-        const wReceived = parseInt(verificationData.receivedWater, 10);
-        const mReceived = parseInt(verificationData.receivedMedical, 10);
+        const fReceived = parseInt(verificationData.receivedFood, 10) || 0;
+        const wReceived = parseInt(verificationData.receivedWater, 10) || 0;
+        const mReceived = parseInt(verificationData.receivedMedical, 10) || 0;
+        const sReceived = parseInt(verificationData.receivedShelter ?? del.dispatchedQuantities?.shelter ?? 0, 10) || 0;
 
-        const fMissing = Math.max(0, del.dispatchedQuantities.food - fReceived);
-        const wMissing = Math.max(0, del.dispatchedQuantities.water - wReceived);
-        const mMissing = Math.max(0, del.dispatchedQuantities.medical - mReceived);
+        const fMissing = Math.max(0, (del.dispatchedQuantities?.food || 0) - fReceived);
+        const wMissing = Math.max(0, (del.dispatchedQuantities?.water || 0) - wReceived);
+        const mMissing = Math.max(0, (del.dispatchedQuantities?.medical || 0) - mReceived);
+        const sMissing = Math.max(0, (del.dispatchedQuantities?.shelter || 0) - sReceived);
 
-        const hasDiscrepancy = fMissing > 0 || wMissing > 0 || mMissing > 0;
+        const hasDiscrepancy = fMissing > 0 || wMissing > 0 || mMissing > 0 || sMissing > 0;
 
+        // Note: del.dispatchedQuantities is strictly preserved and NEVER modified (immutable manifest)
         const updated = {
           ...del,
           stageIndex: 6,
           stage: 'Completed',
           completedTimestamp: new Date().toISOString(),
-          verifiedQuantities: { food: fReceived, water: wReceived, medical: mReceived },
+          verifiedQuantities: { food: fReceived, water: wReceived, medical: mReceived, shelter: sReceived },
           recipientName: verificationData.recipientName || 'Camp Officer',
           recipientAcknowledgement: `ACK-SIG-${Date.now().toString().slice(-6)}`,
           photoProofUrl: verificationData.photoProofUrl || del.photoProofUrl,
@@ -712,11 +746,12 @@ export function ReliefProvider({ children }) {
             foodMissing: fMissing,
             waterMissing: wMissing,
             medicalMissing: mMissing,
+            shelterMissing: sMissing,
             notes: verificationData.notes || 'Transit discrepancy flagged during camp receipt inspection.'
           } : null,
           routeAudit: [
             ...del.routeAudit,
-            { time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), event: `Receipt verified by ${verificationData.recipientName}. Discrepancy: ${hasDiscrepancy ? `${fMissing} Food, ${wMissing} Water, ${mMissing} Med missing` : 'None (100% Intact)'}` },
+            { time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), event: `Receipt verified by ${verificationData.recipientName}. Discrepancy: ${hasDiscrepancy ? `${fMissing} Food, ${wMissing} Water, ${mMissing} Med, ${sMissing} Shelter missing` : 'None (100% Intact)'}` },
             { time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), event: `Lifecycle closed by ${currentUser.name} (${currentUser.role})` }
           ]
         };
@@ -728,7 +763,8 @@ export function ReliefProvider({ children }) {
               received: {
                 food: (c.received?.food || 0) + fReceived,
                 water: (c.received?.water || 0) + wReceived,
-                medical: (c.received?.medical || 0) + mReceived
+                medical: (c.received?.medical || 0) + mReceived,
+                shelter: (c.received?.shelter || 0) + sReceived
               }
             };
           }
@@ -737,7 +773,7 @@ export function ReliefProvider({ children }) {
 
         addToast(
           hasDiscrepancy ? 'warning' : 'success',
-          `Receipt verified for ${del.deliveryCode}. ${hasDiscrepancy ? `Loss flagged: ${fMissing} Food, ${mMissing} Medical missing!` : '100% Intact'}`,
+          `Receipt verified for ${del.deliveryCode}. ${hasDiscrepancy ? `Loss flagged: ${fMissing} Food, ${wMissing} Water, ${mMissing} Med, ${sMissing} Shelter missing!` : '100% Intact'}`,
           'Ground Receipt Audit'
         );
         addAuditLog('VERIFICATION', `Delivery ${del.deliveryCode} verified by ${verificationData.recipientName}. Auditor: ${currentUser.name}`);
