@@ -51,8 +51,11 @@ export default function MapView({ height = '580px' }) {
   // Selected item drawer state
   const [selectedEntity, setSelectedEntity] = useState(null);
 
-  // High-contrast Map Style Selector ('voyager' is crisp and bright, 'osm' is standard street map, 'dark' is tactical)
-  const [mapStyle, setMapStyle] = useState('voyager');
+  // Map Style Selector (100% Keyless, zero API key required)
+  // 'humanitarian': High-contrast Humanitarian OpenStreetMap Team (emergency response roads & camps)
+  // 'satellite': Real-world satellite earth imagery from Esri
+  // 'osm': Standard OpenStreetMap
+  const [mapStyle, setMapStyle] = useState('humanitarian');
 
   // Layer Visibility Controls
   const [layers, setLayers] = useState({
@@ -168,16 +171,44 @@ export default function MapView({ height = '580px' }) {
     });
   };
 
-  // Map Tile Layer URL resolver
-  const getTileUrl = (style) => {
+  // Map Tile Layer URL resolver - 100% Free & Open-Access (No API Key Required)
+  const getTileConfig = (style) => {
     switch (style) {
+      case 'satellite':
+        return {
+          url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+          options: {
+            maxZoom: 19,
+            attribution: 'Esri Satellite Imagery'
+          }
+        };
       case 'osm':
-        return 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
-      case 'dark':
-        return 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
-      case 'voyager':
+        return {
+          url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+          options: {
+            maxZoom: 19,
+            subdomains: 'abc',
+            attribution: 'OpenStreetMap contributors'
+          }
+        };
+      case 'topo':
+        return {
+          url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}',
+          options: {
+            maxZoom: 19,
+            attribution: 'Esri Topo'
+          }
+        };
+      case 'humanitarian':
       default:
-        return 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png';
+        return {
+          url: 'https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png',
+          options: {
+            maxZoom: 19,
+            subdomains: 'abc',
+            attribution: 'OpenStreetMap Humanitarian'
+          }
+        };
     }
   };
 
@@ -194,11 +225,9 @@ export default function MapView({ height = '580px' }) {
         attributionControl: false
       });
 
-      // Default high-contrast Voyager tile layer
-      tileLayerRef.current = L.tileLayer(getTileUrl(mapStyle), {
-        maxZoom: 19,
-        subdomains: 'abcd',
-      }).addTo(map);
+      // Default high-contrast disaster relief tile layer (Keyless)
+      const { url, options } = getTileConfig(mapStyle);
+      tileLayerRef.current = L.tileLayer(url, options).addTo(map);
 
       // Layer Groups
       heatmapLayerRef.current = L.layerGroup().addTo(map);
@@ -216,10 +245,8 @@ export default function MapView({ height = '580px' }) {
     if (tileLayerRef.current) {
       mapInstanceRef.current.removeLayer(tileLayerRef.current);
     }
-    tileLayerRef.current = L.tileLayer(getTileUrl(mapStyle), {
-      maxZoom: 19,
-      subdomains: 'abcd',
-    }).addTo(mapInstanceRef.current);
+    const { url, options } = getTileConfig(mapStyle);
+    tileLayerRef.current = L.tileLayer(url, options).addTo(mapInstanceRef.current);
   }, [mapStyle]);
 
   // 3. Render All Entities & Dynamic Layers
@@ -451,31 +478,40 @@ export default function MapView({ height = '580px' }) {
         {/* Style Selector */}
         <div className="flex items-center gap-1 bg-slate-950/80 p-1 rounded-lg border border-slate-800 mr-1">
           <button
-            onClick={() => setMapStyle('voyager')}
+            onClick={() => setMapStyle('humanitarian')}
             className={`px-2 py-0.5 rounded text-[10px] font-bold transition ${
-              mapStyle === 'voyager' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white'
+              mapStyle === 'humanitarian' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white'
             }`}
-            title="Carto Voyager: Crisp, high-contrast, bright street visibility"
+            title="Humanitarian OpenStreetMap: Optimized emergency roads, camps, and medical points"
           >
-            Vibrant
+            Disaster (HOT)
+          </button>
+          <button
+            onClick={() => setMapStyle('satellite')}
+            className={`px-2 py-0.5 rounded text-[10px] font-bold transition ${
+              mapStyle === 'satellite' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white'
+            }`}
+            title="High-Resolution Satellite Earth Imagery"
+          >
+            Satellite
           </button>
           <button
             onClick={() => setMapStyle('osm')}
             className={`px-2 py-0.5 rounded text-[10px] font-bold transition ${
               mapStyle === 'osm' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white'
             }`}
-            title="Standard OpenStreetMap: Full street names and landmark details"
+            title="Standard OpenStreetMap: Global street networks and landmark details"
           >
             OSM
           </button>
           <button
-            onClick={() => setMapStyle('dark')}
+            onClick={() => setMapStyle('topo')}
             className={`px-2 py-0.5 rounded text-[10px] font-bold transition ${
-              mapStyle === 'dark' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white'
+              mapStyle === 'topo' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white'
             }`}
-            title="Tactical Dark Mode"
+            title="Topographical Elevation & Terrain Contour Map"
           >
-            Dark
+            Topo
           </button>
         </div>
 
